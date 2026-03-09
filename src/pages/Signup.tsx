@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -13,14 +13,18 @@ export default function Signup() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [signupComplete, setSignupComplete] = useState(false);
   
   const { signUp, user } = useAuth();
   const { toast } = useToast();
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // Get the redirect path from location state
+  const from = location.state?.from?.pathname || '/account';
 
   // Redirect if already logged in
   if (user) {
-    return <Navigate to="/account" replace />;
+    return <Navigate to={from} replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,11 +33,13 @@ export default function Signup() {
 
     try {
       await signUp(email, password, firstName, lastName);
-      setSignupComplete(true);
       toast({
         title: 'Account Created!',
-        description: 'Please check your email to verify your account.',
+        description: 'Welcome to Hayaat Hijabs!',
       });
+      // Auto-confirm is enabled, so user is logged in immediately
+      // Navigate to the intended destination
+      navigate(from, { replace: true });
     } catch (error: any) {
       toast({
         title: 'Sign Up Failed',
@@ -44,31 +50,6 @@ export default function Signup() {
       setIsLoading(false);
     }
   };
-
-  if (signupComplete) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-background px-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-luxury">Check Your Email</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center">
-            <p className="text-muted-foreground mb-4">
-              We've sent you a verification link at <strong>{email}</strong>
-            </p>
-            <p className="text-sm text-muted-foreground mb-6">
-              Please check your inbox and click the link to activate your account.
-            </p>
-            <Link to="/login">
-              <Button variant="outline" className="w-full">
-                Back to Sign In
-              </Button>
-            </Link>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
@@ -135,11 +116,15 @@ export default function Signup() {
             </Button>
           </form>
 
-          <div className="mt-4 text-center">
+          <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Already have an account?{' '}
-              <Link to="/login" className="text-primary hover:underline">
-                Sign in
+              <Link 
+                to="/login" 
+                state={{ from: location.state?.from }}
+                className="text-primary hover:underline font-medium"
+              >
+                Login
               </Link>
             </p>
           </div>

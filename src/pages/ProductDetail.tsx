@@ -67,6 +67,13 @@ export default function ProductDetail() {
       .flatMap((variant) => variant.product_images);
   }, [product, selectedVariant, selectedColor]);
 
+  // Get the primary image for cart
+  const primaryImage = useMemo(() => {
+    const images = selectedVariant?.product_images || imagesForGallery;
+    const primary = images.find(img => img.is_primary) || images[0];
+    return primary?.image_url || '/placeholder.svg';
+  }, [selectedVariant, imagesForGallery]);
+
   const colors = useMemo(() => Array.from(new Set(product?.product_variants.map((variant) => variant.color) ?? [])), [product]);
   const sizes = useMemo(
     () => Array.from(new Set((product?.product_variants ?? []).filter((variant) => variant.color === selectedColor).map((variant) => variant.size || ''))),
@@ -107,10 +114,15 @@ export default function ProductDetail() {
           <div>
             <h1 className="text-3xl font-luxury font-semibold">{product.name}</h1>
             {product.fabric_type && <p className="text-muted-foreground mt-1">{product.fabric_type}</p>}
-            <p className="text-2xl font-semibold mt-3">${Number(selectedVariant?.price || 0).toFixed(2)}</p>
-            {selectedVariant && (selectedVariant.stock_quantity || 0) < 5 && (
+            <p className="text-2xl font-semibold mt-3">₹{Number(selectedVariant?.price || 0).toFixed(2)}</p>
+            {selectedVariant && (selectedVariant.stock_quantity || 0) < 5 && (selectedVariant.stock_quantity || 0) > 0 && (
               <Badge variant="secondary" className="mt-2">
-                Low stock
+                Only {selectedVariant.stock_quantity} left
+              </Badge>
+            )}
+            {selectedVariant && (selectedVariant.stock_quantity || 0) <= 0 && (
+              <Badge variant="destructive" className="mt-2">
+                Out of stock
               </Badge>
             )}
           </div>
@@ -164,6 +176,12 @@ export default function ProductDetail() {
               variantId={selectedVariant.id}
               disabled={(selectedVariant.stock_quantity || 0) <= 0}
               className="w-full md:w-auto"
+              // Props for guest cart
+              productName={product.name}
+              productPrice={Number(selectedVariant.price)}
+              productImage={primaryImage}
+              productColor={selectedVariant.color}
+              productSize={selectedVariant.size}
             />
           )}
 

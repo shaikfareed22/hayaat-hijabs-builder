@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,10 +15,13 @@ export default function Login() {
   const { signIn, user, profile } = useAuth();
   const { toast } = useToast();
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Get the redirect path from location state
+  const from = location.state?.from?.pathname || (profile?.role === 'admin' ? '/admin' : '/account');
 
   // Redirect if already logged in
   if (user) {
-    const from = location.state?.from?.pathname || (profile?.role === 'admin' ? '/admin' : '/account');
     return <Navigate to={from} replace />;
   }
 
@@ -32,6 +35,8 @@ export default function Login() {
         title: 'Welcome back!',
         description: 'You have been signed in successfully.',
       });
+      // Navigate to the intended destination
+      navigate(from, { replace: true });
     } catch (error: any) {
       toast({
         title: 'Sign In Failed',
@@ -87,15 +92,19 @@ export default function Login() {
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? 'Signing In...' : 'Sign In'}
+              {isLoading ? 'Signing In...' : 'Login'}
             </Button>
           </form>
 
-          <div className="mt-4 text-center">
+          <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
               Don't have an account?{' '}
-              <Link to="/signup" className="text-primary hover:underline">
-                Sign up
+              <Link 
+                to="/signup" 
+                state={{ from: location.state?.from }}
+                className="text-primary hover:underline font-medium"
+              >
+                Create Account
               </Link>
             </p>
           </div>

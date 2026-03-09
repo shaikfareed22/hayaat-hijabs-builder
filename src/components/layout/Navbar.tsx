@@ -11,11 +11,9 @@ import { useCartContext } from "@/contexts/CartContext";
 
 const navLinks = [
   { name: "Home", path: "/" },
-  { name: "Shop", path: "/shop" },
+  { name: "Shop", path: "/products" },
   { name: "Collections", path: "/collections" },
-  { name: "New Arrivals", path: "/new-arrivals" },
-  { name: "About", path: "/about" },
-  { name: "Contact", path: "/contact" },
+  { name: "Cart", path: "/cart" },
 ];
 
 const Navbar = () => {

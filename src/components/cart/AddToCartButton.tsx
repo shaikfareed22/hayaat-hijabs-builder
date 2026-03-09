@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { ShoppingCart, Plus, Check } from "lucide-react";
 import { useAddToCart } from "@/hooks/useCart";
 import { useAuth } from "@/contexts/AuthContext";
-import { Link } from "react-router-dom";
+import { useCartContext } from "@/contexts/CartContext";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -14,6 +14,12 @@ interface AddToCartButtonProps {
   variant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
   size?: "default" | "sm" | "lg" | "icon";
   className?: string;
+  // Product info for guest cart
+  productName?: string;
+  productPrice?: number;
+  productImage?: string;
+  productColor?: string;
+  productSize?: string | null;
 }
 
 export function AddToCartButton({
@@ -25,48 +31,49 @@ export function AddToCartButton({
   variant = "default",
   size = "default",
   className,
+  productName = '',
+  productPrice = 0,
+  productImage = '/placeholder.svg',
+  productColor = '',
+  productSize = null,
 }: AddToCartButtonProps) {
   const { user } = useAuth();
+  const { addToGuestCart } = useCartContext();
   const [isAdded, setIsAdded] = useState(false);
   const addToCart = useAddToCart();
 
   const handleAddToCart = async () => {
-    if (!user) return;
-
     try {
-      await addToCart.mutateAsync({
-        product_id: productId,
-        variant_id: variantId,
-        quantity,
-      });
+      if (user) {
+        // Authenticated user - use API
+        await addToCart.mutateAsync({
+          product_id: productId,
+          variant_id: variantId,
+          quantity,
+        });
+      } else {
+        // Guest user - use localStorage
+        addToGuestCart({
+          product_id: productId,
+          variant_id: variantId,
+          name: productName,
+          price: productPrice,
+          quantity,
+          image_url: productImage,
+          color: productColor,
+          size: productSize,
+        });
+      }
       
       // Show success state briefly
       setIsAdded(true);
       setTimeout(() => setIsAdded(false), 2000);
     } catch (error) {
-      // Error handling is done in the hook
+      // Error handling is done in the hook/context
     }
   };
 
-  if (!user) {
-    return (
-      <Button 
-        variant={variant} 
-        size={size} 
-        className={className}
-        asChild
-      >
-        <Link to="/login">
-          {children || (
-            <>
-              <ShoppingCart className="h-4 w-4 mr-2" />
-              Sign in to Add to Cart
-            </>
-          )}
-        </Link>
-      </Button>
-    );
-  }
+  const isPending = addToCart.isPending;
 
   return (
     <Button
@@ -74,11 +81,11 @@ export function AddToCartButton({
       size={size}
       className={className}
       onClick={handleAddToCart}
-      disabled={disabled || addToCart.isPending}
+      disabled={disabled || isPending}
     >
       {children || (
         <>
-          {addToCart.isPending ? (
+          {isPending ? (
             <>
               <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-primary border-t-transparent" />
               Adding...

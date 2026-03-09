@@ -1,12 +1,14 @@
 import { useState } from "react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { ShoppingBag, Minus, Plus } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useCart, useUpdateCartItem, useRemoveFromCart } from "@/hooks/useCart";
+import { Badge } from "@/components/ui/badge";
+import { ShoppingBag, Minus, Plus, Trash2 } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useUpdateCartItem, useRemoveFromCart } from "@/hooks/useCart";
 import { useAuth } from "@/contexts/AuthContext";
-import { CartItem } from "./CartItem";
+import { useCartContext } from "@/contexts/CartContext";
+import type { GuestCartItem } from "@/services/guestCartService";
+import type { CartItem as AuthCartItem } from "@/services/cartService";
 
 interface CartDrawerProps {
   children: React.ReactNode;
@@ -14,19 +16,70 @@ interface CartDrawerProps {
 
 export function CartDrawer({ children }: CartDrawerProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const { data: cartData, isLoading } = useCart();
-
-  if (!user) {
-    return (
-      <Link to="/login" className="relative p-2 hover:text-foreground text-muted-foreground transition-colors">
-        {children}
-      </Link>
-    );
-  }
+  const { cartData, isLoading, isGuest, updateGuestCartItem, removeFromGuestCart } = useCartContext();
+  const updateCartItem = useUpdateCartItem();
+  const removeFromCart = useRemoveFromCart();
 
   const items = cartData?.items || [];
   const subtotal = cartData?.subtotal || "0.00";
+
+  // Helper to determine item properties based on guest or auth
+  const getItemProps = (item: GuestCartItem | AuthCartItem) => {
+    if (isGuest) {
+      const guestItem = item as GuestCartItem;
+      return {
+        id: guestItem.id,
+        name: guestItem.name,
+        color: guestItem.color,
+        size: guestItem.size,
+        price: guestItem.price,
+        quantity: guestItem.quantity,
+        image: guestItem.image_url,
+      };
+    } else {
+      const authItem = item as AuthCartItem;
+      const primaryImage = authItem.product_variants.products.product_images.find(
+        img => img.is_primary
+      ) || authItem.product_variants.products.product_images[0];
+      
+      return {
+        id: authItem.id,
+        name: authItem.product_variants.products.name,
+        color: authItem.product_variants.color,
+        size: authItem.product_variants.size,
+        price: authItem.product_variants.price,
+        quantity: authItem.quantity,
+        image: primaryImage?.image_url || '/placeholder.svg',
+      };
+    }
+  };
+
+  const handleUpdateQuantity = (id: string, quantity: number) => {
+    if (isGuest) {
+      updateGuestCartItem(id, quantity);
+    } else {
+      updateCartItem.mutate({ cart_item_id: id, quantity });
+    }
+  };
+
+  const handleRemove = (id: string) => {
+    if (isGuest) {
+      removeFromGuestCart(id);
+    } else {
+      removeFromCart.mutate({ cart_item_id: id });
+    }
+  };
+
+  const handleCheckout = () => {
+    setIsOpen(false);
+    if (!user) {
+      navigate('/login', { state: { from: { pathname: '/checkout' } } });
+    } else {
+      navigate('/checkout');
+    }
+  };
 
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
@@ -77,16 +130,66 @@ export function CartDrawer({ children }: CartDrawerProps) {
             <>
               {/* Cart Items */}
               <div className="flex-1 space-y-4 max-h-96 overflow-y-auto">
-                {items.map((item) => (
-                  <CartItem key={item.id} item={item} />
-                ))}
+                {items.map((item) => {
+                  const props = getItemProps(item);
+                  return (
+                    <div key={props.id} className="flex gap-3 border-b pb-4">
+                      <img
+                        src={props.image}
+                        alt={props.name}
+                        className="w-16 h-16 object-cover rounded-md"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-medium text-sm truncate">{props.name}</h4>
+                        <div className="flex items-center gap-1 mt-1">
+                          <Badge variant="outline" className="text-xs">{props.color}</Badge>
+                          {props.size && (
+                            <Badge variant="outline" className="text-xs">{props.size}</Badge>
+                          )}
+                        </div>
+                        <p className="font-semibold text-sm mt-1">₹{props.price.toFixed(2)}</p>
+                        
+                        <div className="flex items-center justify-between mt-2">
+                          <div className="flex items-center gap-1 border rounded">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleUpdateQuantity(props.id, props.quantity - 1)}
+                              disabled={props.quantity <= 1}
+                            >
+                              <Minus className="h-3 w-3" />
+                            </Button>
+                            <span className="w-6 text-center text-sm">{props.quantity}</span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6"
+                              onClick={() => handleUpdateQuantity(props.id, props.quantity + 1)}
+                            >
+                              <Plus className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6 text-destructive"
+                            onClick={() => handleRemove(props.id)}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Cart Summary */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex justify-between items-center">
                   <span className="text-base font-medium">Subtotal</span>
-                  <span className="text-lg font-semibold">${subtotal}</span>
+                  <span className="text-lg font-semibold">₹{subtotal}</span>
                 </div>
                 
                 <p className="text-sm text-muted-foreground">
@@ -97,12 +200,9 @@ export function CartDrawer({ children }: CartDrawerProps) {
                   <Button 
                     className="w-full h-12" 
                     size="lg"
-                    onClick={() => setIsOpen(false)}
-                    asChild
+                    onClick={handleCheckout}
                   >
-                    <Link to="/checkout">
-                      Checkout
-                    </Link>
+                    {user ? 'Checkout' : 'Login to Checkout'}
                   </Button>
                   
                   <Button 
@@ -111,9 +211,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
                     onClick={() => setIsOpen(false)}
                     asChild
                   >
-                    <Link to="/">
-                      Continue Shopping
-                    </Link>
+                    <Link to="/cart">View Cart</Link>
                   </Button>
                 </div>
               </div>
