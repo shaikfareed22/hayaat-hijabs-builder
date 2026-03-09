@@ -44,9 +44,9 @@ export default function Cart() {
       };
     } else {
       const authItem = item as AuthCartItem;
-      const primaryImage = authItem.product_variants.products.product_images.find(
+      const primaryImage = authItem.product_variants.product_images?.find(
         img => img.is_primary
-      ) || authItem.product_variants.products.product_images[0];
+      ) || authItem.product_variants.product_images?.[0];
       
       return {
         id: authItem.id,
