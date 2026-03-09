@@ -103,12 +103,12 @@ export const productService = {
 
   /** PUT /products/:id — update */
   async update(id: string, productData: any) {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const session = (await supabase.auth.getSession()).data.session;
 
     const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/products/${id}`,
+      `${supabaseUrl}/functions/v1/products/${id}`,
       {
         method: "PUT",
         headers: {
@@ -131,12 +131,12 @@ export const productService = {
 
   /** DELETE /products/:id — soft delete */
   async delete(id: string) {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const session = (await supabase.auth.getSession()).data.session;
 
     const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/products/${id}`,
+      `${supabaseUrl}/functions/v1/products/${id}`,
       {
         method: "DELETE",
         headers: {
