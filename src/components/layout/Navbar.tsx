@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, ShoppingBag, Heart, User, Menu, X } from "lucide-react";
+import { Search, ShoppingBag, Heart, User, Menu, X, Shield, LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const navLinks = [
   { name: "Home", path: "/" },
@@ -18,6 +20,28 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, profile, signOut } = useAuth();
+  const { toast } = useToast();
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/');
+      toast({
+        title: 'Signed Out',
+        description: 'You have been signed out successfully.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Sign Out Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const isAdmin = profile?.role === 'admin';
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
@@ -74,12 +98,41 @@ const Navbar = () => {
             >
               <Heart className="h-5 w-5" />
             </Link>
-            <Link
-              to="/account"
-              className="p-2 hover:text-foreground text-muted-foreground transition-colors hidden sm:block"
-            >
-              <User className="h-5 w-5" />
-            </Link>
+            
+            {user ? (
+              <>
+                {isAdmin && (
+                  <Link
+                    to="/admin"
+                    className="p-2 hover:text-foreground text-muted-foreground transition-colors hidden sm:block"
+                    title="Admin Dashboard"
+                  >
+                    <Shield className="h-5 w-5" />
+                  </Link>
+                )}
+                <Link
+                  to="/account"
+                  className="p-2 hover:text-foreground text-muted-foreground transition-colors hidden sm:block"
+                >
+                  <User className="h-5 w-5" />
+                </Link>
+                <button
+                  onClick={handleSignOut}
+                  className="p-2 hover:text-foreground text-muted-foreground transition-colors hidden sm:block"
+                  title="Sign Out"
+                >
+                  <LogOut className="h-5 w-5" />
+                </button>
+              </>
+            ) : (
+              <Link
+                to="/login"
+                className="p-2 hover:text-foreground text-muted-foreground transition-colors hidden sm:block"
+              >
+                <User className="h-5 w-5" />
+              </Link>
+            )}
+            
             <Link to="/cart" className="relative p-2 hover:text-foreground text-muted-foreground transition-colors">
               <ShoppingBag className="h-5 w-5" />
               <span className="absolute -top-0 -right-0 bg-accent text-accent-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
@@ -132,13 +185,68 @@ const Navbar = () => {
                   {link.name}
                 </Link>
               ))}
-              <div className="flex gap-4 pt-4 border-t border-border mt-2">
-                <Link to="/wishlist" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Heart className="h-4 w-4" /> Wishlist
-                </Link>
-                <Link to="/account" onClick={() => setIsMenuOpen(false)} className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <User className="h-4 w-4" /> Account
-                </Link>
+              
+              <div className="flex flex-col gap-2 pt-4 border-t border-border mt-2">
+                {user ? (
+                  <>
+                    {isAdmin && (
+                      <Link 
+                        to="/admin" 
+                        onClick={() => setIsMenuOpen(false)} 
+                        className="flex items-center gap-2 py-3 px-4 text-sm text-muted-foreground hover:bg-muted rounded-lg"
+                      >
+                        <Shield className="h-4 w-4" /> Admin Dashboard
+                      </Link>
+                    )}
+                    <Link 
+                      to="/account" 
+                      onClick={() => setIsMenuOpen(false)} 
+                      className="flex items-center gap-2 py-3 px-4 text-sm text-muted-foreground hover:bg-muted rounded-lg"
+                    >
+                      <User className="h-4 w-4" /> My Account
+                    </Link>
+                    <Link 
+                      to="/orders" 
+                      onClick={() => setIsMenuOpen(false)} 
+                      className="flex items-center gap-2 py-3 px-4 text-sm text-muted-foreground hover:bg-muted rounded-lg"
+                    >
+                      <ShoppingBag className="h-4 w-4" /> My Orders
+                    </Link>
+                    <Link 
+                      to="/wishlist" 
+                      onClick={() => setIsMenuOpen(false)} 
+                      className="flex items-center gap-2 py-3 px-4 text-sm text-muted-foreground hover:bg-muted rounded-lg"
+                    >
+                      <Heart className="h-4 w-4" /> Wishlist
+                    </Link>
+                    <button 
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleSignOut();
+                      }} 
+                      className="flex items-center gap-2 py-3 px-4 text-sm text-muted-foreground hover:bg-muted rounded-lg text-left"
+                    >
+                      <LogOut className="h-4 w-4" /> Sign Out
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Link 
+                      to="/login" 
+                      onClick={() => setIsMenuOpen(false)} 
+                      className="flex items-center gap-2 py-3 px-4 text-sm text-muted-foreground hover:bg-muted rounded-lg"
+                    >
+                      <User className="h-4 w-4" /> Sign In
+                    </Link>
+                    <Link 
+                      to="/signup" 
+                      onClick={() => setIsMenuOpen(false)} 
+                      className="flex items-center gap-2 py-3 px-4 text-sm text-primary hover:bg-muted rounded-lg"
+                    >
+                      Create Account
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
           </motion.div>
