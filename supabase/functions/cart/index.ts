@@ -66,9 +66,9 @@ Deno.serve(async (req) => {
           *,
           product_variants (
             *,
+            product_images ( image_url, alt_text, is_primary ),
             products (
-              id, name, slug, short_description,
-              product_images ( image_url, alt_text, is_primary )
+              id, name, slug, short_description
             )
           )
         `)
