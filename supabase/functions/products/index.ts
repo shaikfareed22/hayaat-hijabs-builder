@@ -1,4 +1,12 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.98.0";
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  getClientIP,
+  sanitizeString,
+  sanitizeInt,
+  sanitizeUUID,
+} from "../_shared/security.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,19 +30,66 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // ── Rate Limiting ──
+  const clientIP = getClientIP(req);
+  const rl = checkRateLimit(`products:${clientIP}`, { windowMs: 60_000, maxRequests: 120 });
+  if (!rl.allowed) return rateLimitResponse(rl.resetAt);
+
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-  // Auth: use caller's token when available, fallback to service role for public reads
   const authHeader = req.headers.get("authorization");
-  const supabase = createClient(supabaseUrl, serviceRoleKey, {
-    global: { headers: authHeader ? { Authorization: authHeader } : {} },
-  });
+
+  // For write operations, verify admin role server-side
+  const isWriteMethod = ["POST", "PUT", "DELETE"].includes(req.method);
+
+  let supabase: any;
+
+  if (isWriteMethod) {
+    // Write operations require auth and admin role
+    const token = authHeader?.replace("Bearer ", "");
+    if (!token) return errorResponse("Authorization required", 401);
+
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    // Server-side token verification
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !user) return errorResponse("Invalid or expired token", 401);
+
+    // Server-side admin role check using the has_role function
+    const { data: isAdmin } = await supabaseAdmin.rpc("has_role", {
+      _user_id: user.id,
+      _role: "admin",
+    });
+
+    if (!isAdmin) {
+      return errorResponse("Forbidden: admin access required", 403);
+    }
+
+    // Stricter rate limit for admin writes
+    const writeRl = checkRateLimit(`products:write:${user.id}`, { windowMs: 60_000, maxRequests: 30 });
+    if (!writeRl.allowed) return rateLimitResponse(writeRl.resetAt);
+
+    supabase = createClient(supabaseUrl, serviceRoleKey, {
+      global: { headers: authHeader ? { Authorization: authHeader } : {} },
+    });
+  } else {
+    // Read operations use service role for public data
+    supabase = createClient(supabaseUrl, serviceRoleKey, {
+      global: { headers: authHeader ? { Authorization: authHeader } : {} },
+    });
+  }
 
   const url = new URL(req.url);
-  // Extract product id from path: /products/:id
   const pathParts = url.pathname.replace(/^\/products\/?/, "").split("/").filter(Boolean);
   const productId = pathParts[0] || null;
+
+  // Validate productId if present
+  if (productId && !sanitizeUUID(productId)) {
+    return errorResponse("Invalid product ID format", 400);
+  }
 
   try {
     switch (req.method) {
@@ -79,17 +134,17 @@ async function getProduct(supabase: any, id: string) {
 
 // ─── GET list with filtering, search, sorting, pagination ─────
 async function listProducts(supabase: any, url: URL) {
-  const page = Math.max(1, parseInt(url.searchParams.get("page") || "1"));
-  const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get("limit") || "12")));
-  const search = url.searchParams.get("search") || "";
-  const categoryId = url.searchParams.get("category_id") || "";
-  const categorySlug = url.searchParams.get("category") || "";
+  const page = sanitizeInt(url.searchParams.get("page") || "1", 1, 1000);
+  const limit = sanitizeInt(url.searchParams.get("limit") || "12", 1, 100);
+  const search = sanitizeString(url.searchParams.get("search") || "", 200);
+  const categoryId = sanitizeUUID(url.searchParams.get("category_id") || "");
+  const categorySlug = sanitizeString(url.searchParams.get("category") || "", 100);
   const featured = url.searchParams.get("featured");
   const minPrice = url.searchParams.get("min_price");
   const maxPrice = url.searchParams.get("max_price");
-  const sortBy = url.searchParams.get("sort_by") || "created_at";
+  const sortBy = sanitizeString(url.searchParams.get("sort_by") || "created_at", 50);
   const sortOrder = url.searchParams.get("sort_order") === "asc" ? true : false;
-  const collectionSlug = url.searchParams.get("collection") || "";
+  const collectionSlug = sanitizeString(url.searchParams.get("collection") || "", 100);
 
   let query = supabase
     .from("products")
@@ -103,17 +158,17 @@ async function listProducts(supabase: any, url: URL) {
       product_collections ( collection_id, collections ( id, name, slug ) )
     `, { count: "exact" });
 
-  // Filters
   query = query.eq("is_active", true);
 
   if (search) {
-    query = query.or(`name.ilike.%${search}%,description.ilike.%${search}%,short_description.ilike.%${search}%`);
+    // Escape special characters to prevent injection
+    const escapedSearch = search.replace(/[%_]/g, '\\$&');
+    query = query.or(`name.ilike.%${escapedSearch}%,description.ilike.%${escapedSearch}%,short_description.ilike.%${escapedSearch}%`);
   }
 
   if (categoryId) {
     query = query.eq("category_id", categoryId);
   } else if (categorySlug) {
-    // Need to resolve slug to id first
     const { data: cat } = await supabase
       .from("categories")
       .select("id")
@@ -126,12 +181,10 @@ async function listProducts(supabase: any, url: URL) {
     query = query.eq("is_featured", true);
   }
 
-  // Sorting
   const validSortColumns = ["created_at", "updated_at", "name"];
   const sortCol = validSortColumns.includes(sortBy) ? sortBy : "created_at";
   query = query.order(sortCol, { ascending: sortOrder });
 
-  // Pagination
   const from = (page - 1) * limit;
   const to = from + limit - 1;
   query = query.range(from, to);
@@ -140,15 +193,16 @@ async function listProducts(supabase: any, url: URL) {
 
   if (error) return errorResponse(error.message);
 
-  // Post-filter by price range and collection (requires variant/join data)
   let filtered = data || [];
 
   if (minPrice || maxPrice) {
     const min = minPrice ? parseFloat(minPrice) : 0;
     const max = maxPrice ? parseFloat(maxPrice) : Infinity;
-    filtered = filtered.filter((p: any) =>
-      p.product_variants?.some((v: any) => v.price >= min && v.price <= max)
-    );
+    if (!isNaN(min) && !isNaN(max)) {
+      filtered = filtered.filter((p: any) =>
+        p.product_variants?.some((v: any) => v.price >= min && v.price <= max)
+      );
+    }
   }
 
   if (collectionSlug) {
@@ -157,7 +211,6 @@ async function listProducts(supabase: any, url: URL) {
     );
   }
 
-  // Transform response: normalize variants, compute lowest_price & primary_image
   const transformed = filtered.map((product: any) => {
     const variants = (product.product_variants || []).map((v: any) => ({
       ...v,
@@ -167,7 +220,6 @@ async function listProducts(supabase: any, url: URL) {
     const lowestPrice = activePrices.length ? Math.min(...activePrices) : 0;
     const highestPrice = activePrices.length ? Math.max(...activePrices) : 0;
 
-    // Find primary image across all variants
     let primaryImage = '/placeholder.svg';
     for (const v of variants) {
       const img = v.images?.find((i: any) => i.is_primary);
@@ -198,10 +250,25 @@ async function listProducts(supabase: any, url: URL) {
 
 // ─── POST create product ─────────────────────────────────────
 async function createProduct(supabase: any, req: Request) {
-  const body = await req.json();
+  let body: any;
+  try { body = await req.json(); } catch {
+    return errorResponse("Invalid JSON body");
+  }
+
   const { variants, images, collections, ...productData } = body;
 
-  // Insert product
+  // Validate required fields
+  if (!productData.name || typeof productData.name !== 'string' || productData.name.trim().length < 1) {
+    return errorResponse("Product name is required");
+  }
+  if (!productData.slug || typeof productData.slug !== 'string') {
+    return errorResponse("Product slug is required");
+  }
+
+  // Sanitize product data
+  productData.name = sanitizeString(productData.name, 200);
+  productData.slug = sanitizeString(productData.slug, 200).toLowerCase().replace(/[^a-z0-9-]/g, '-');
+
   const { data: product, error } = await supabase
     .from("products")
     .insert(productData)
@@ -210,7 +277,6 @@ async function createProduct(supabase: any, req: Request) {
 
   if (error) return errorResponse(error.message);
 
-  // Insert variants if provided
   if (variants?.length) {
     const variantRows = variants.map((v: any) => ({ ...v, product_id: product.id }));
     const { data: insertedVariants, error: vErr } = await supabase
@@ -220,7 +286,6 @@ async function createProduct(supabase: any, req: Request) {
 
     if (vErr) return errorResponse(`Product created but variants failed: ${vErr.message}`);
 
-    // Insert images for each variant
     if (images?.length && insertedVariants?.length) {
       const imageRows = images.map((img: any) => ({
         ...img,
@@ -230,7 +295,6 @@ async function createProduct(supabase: any, req: Request) {
     }
   }
 
-  // Link to collections
   if (collections?.length) {
     const collRows = collections.map((cId: string) => ({
       product_id: product.id,
@@ -244,8 +308,15 @@ async function createProduct(supabase: any, req: Request) {
 
 // ─── PUT update product ──────────────────────────────────────
 async function updateProduct(supabase: any, id: string, req: Request) {
-  const body = await req.json();
+  let body: any;
+  try { body = await req.json(); } catch {
+    return errorResponse("Invalid JSON body");
+  }
+
   const { variants, images, collections, ...productData } = body;
+
+  if (productData.name) productData.name = sanitizeString(productData.name, 200);
+  if (productData.slug) productData.slug = sanitizeString(productData.slug, 200).toLowerCase().replace(/[^a-z0-9-]/g, '-');
 
   const { data: product, error } = await supabase
     .from("products")
@@ -256,7 +327,6 @@ async function updateProduct(supabase: any, id: string, req: Request) {
 
   if (error) return errorResponse(error.message);
 
-  // Update variants if provided
   if (variants?.length) {
     for (const v of variants) {
       if (v.id) {
