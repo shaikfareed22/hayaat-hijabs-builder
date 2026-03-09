@@ -18,6 +18,7 @@ import Orders from "./pages/Orders";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import ProductDetail from "./pages/ProductDetail";
+import Products from "./pages/Products";
 import OrderConfirmation from "./pages/OrderConfirmation";
 
 // Admin pages
