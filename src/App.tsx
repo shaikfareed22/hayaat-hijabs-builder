@@ -16,6 +16,7 @@ import ResetPassword from "./pages/ResetPassword";
 import Account from "./pages/Account";
 import Orders from "./pages/Orders";
 import Checkout from "./pages/Checkout";
+import ProductDetail from "./pages/ProductDetail";
 import OrderConfirmation from "./pages/OrderConfirmation";
 
 // Admin pages
@@ -127,6 +128,16 @@ const App = () => (
                       <Footer />
                     </div>
                   </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/products/:slug"
+                element={
+                  <div className="min-h-screen flex flex-col">
+                    <Navbar />
+                    <main className="flex-1"><ProductDetail /></main>
+                    <Footer />
+                  </div>
                 }
               />
 
