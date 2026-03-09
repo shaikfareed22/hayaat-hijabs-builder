@@ -45,7 +45,9 @@ export default function Checkout() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<ShippingAddress>();
+  } = useForm<ShippingAddress>({
+    resolver: zodResolver(shippingSchema),
+  });
 
   useEffect(() => {
     if (!user && !cartLoading) {
