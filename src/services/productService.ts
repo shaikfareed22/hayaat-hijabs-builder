@@ -37,28 +37,18 @@ export const productService = {
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-    // Get session without blocking - use cached value
-    let authHeader: string | undefined;
-    try {
-      const { data } = await supabase.auth.getSession();
-      authHeader = data.session?.access_token ? `Bearer ${data.session.access_token}` : undefined;
-    } catch {
-      // Continue without auth for public product listing
-    }
-
     const res = await fetch(
       `${supabaseUrl}/functions/v1/products?${params.toString()}`,
       {
         headers: {
           apikey: anonKey,
           "Content-Type": "application/json",
-          ...(authHeader ? { Authorization: authHeader } : {}),
         },
       }
     );
 
     if (!res.ok) {
-      const err = await res.json();
+      const err = await res.json().catch(() => ({ error: 'Failed to fetch products' }));
       throw new Error(err.error || "Failed to fetch products");
     }
 
