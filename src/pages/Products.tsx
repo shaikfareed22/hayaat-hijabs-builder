@@ -61,22 +61,11 @@ export default function Products() {
 
   const hasActiveFilters = search || categoryId !== 'all';
 
-  // Get primary image and price from first variant
-  const getProductImage = (product: any) => {
-    const variant = product.variants?.[0];
-    const image = variant?.images?.find((img: any) => img.is_primary) || variant?.images?.[0];
-    return image?.image_url || '/placeholder.svg';
-  };
-
-  const getProductPrice = (product: any) => {
-    const variant = product.variants?.[0];
-    return variant?.price || 0;
-  };
-
-  const getCompareAtPrice = (product: any) => {
-    const variant = product.variants?.[0];
-    return variant?.compare_at_price;
-  };
+  // Use computed fields from API
+  const getProductImage = (product: any) => product.primary_image || '/placeholder.svg';
+  const getLowestPrice = (product: any) => product.lowest_price || 0;
+  const getHighestPrice = (product: any) => product.highest_price || 0;
+  const hasMultiplePrices = (product: any) => product.lowest_price !== product.highest_price;
 
   return (
     <div className="container mx-auto px-4 py-8">
