@@ -15,7 +15,7 @@ export function CartItem({ item }: CartItemProps) {
 
   const { product_variants: variant } = item;
   const product = variant.products;
-  const primaryImage = product.product_images.find(img => img.is_primary) || product.product_images[0];
+  const primaryImage = variant.product_images?.find(img => img.is_primary) || variant.product_images?.[0];
 
   const handleQuantityChange = async (newQuantity: number) => {
     if (newQuantity < 1) return;
