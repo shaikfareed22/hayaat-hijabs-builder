@@ -15,16 +15,16 @@ export interface CartItem {
     size: string | null;
     sku: string;
     stock_quantity: number;
+    product_images: Array<{
+      image_url: string;
+      alt_text: string | null;
+      is_primary: boolean | null;
+    }>;
     products: {
       id: string;
       name: string;
       slug: string;
       short_description: string | null;
-      product_images: Array<{
-        image_url: string;
-        alt_text: string | null;
-        is_primary: boolean | null;
-      }>;
     };
   };
 }
