@@ -521,6 +521,7 @@ export type Database = {
       }
       user_profiles: {
         Row: {
+          address: Json | null
           created_at: string
           date_of_birth: string | null
           display_name: string | null
@@ -535,6 +536,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          address?: Json | null
           created_at?: string
           date_of_birth?: string | null
           display_name?: string | null
@@ -549,6 +551,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          address?: Json | null
           created_at?: string
           date_of_birth?: string | null
           display_name?: string | null
