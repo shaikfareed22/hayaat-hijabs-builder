@@ -63,7 +63,7 @@ export default function OrderConfirmation() {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       {/* Success Header */}
       <div className="text-center mb-8">
-        <CheckCircle className="w-16 h-16 text-green-600 mx-auto mb-4" />
+        <CheckCircle className="w-16 h-16 text-primary mx-auto mb-4" />
         <h1 className="text-3xl font-luxury mb-2">Order Confirmed!</h1>
         <p className="text-muted-foreground">
           Thank you for your purchase. Your order has been received and is being processed.
