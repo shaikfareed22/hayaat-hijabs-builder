@@ -33,8 +33,10 @@ export function useCreateOrder() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (shippingAddress: ShippingAddress) => 
-      orderService.createOrder(shippingAddress),
+    mutationFn: (data: ShippingAddress & { coupon_code?: string }) => {
+      const { coupon_code, ...address } = data;
+      return orderService.createOrder(address, coupon_code);
+    },
     onSuccess: (data) => {
       // Invalidate both orders and cart queries
       queryClient.invalidateQueries({ queryKey: ORDERS_QUERY_KEY });
