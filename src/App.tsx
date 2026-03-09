@@ -20,6 +20,9 @@ import Checkout from "./pages/Checkout";
 import ProductDetail from "./pages/ProductDetail";
 import Products from "./pages/Products";
 import OrderConfirmation from "./pages/OrderConfirmation";
+import Collections from "./pages/Collections";
+import CollectionDetail from "./pages/CollectionDetail";
+import Wishlist from "./pages/Wishlist";
 
 // Admin pages
 import AdminLayout from "./pages/admin/AdminLayout";
@@ -57,6 +60,8 @@ const App = () => (
               <Route path="/reset-password" element={<PublicLayout><ResetPassword /></PublicLayout>} />
               <Route path="/products/:slug" element={<PublicLayout><ProductDetail /></PublicLayout>} />
               <Route path="/products" element={<PublicLayout><Products /></PublicLayout>} />
+              <Route path="/collections" element={<PublicLayout><Collections /></PublicLayout>} />
+              <Route path="/collections/:slug" element={<PublicLayout><CollectionDetail /></PublicLayout>} />
               <Route path="/cart" element={<PublicLayout><Cart /></PublicLayout>} />
               
               {/* Protected user routes */}
@@ -81,6 +86,14 @@ const App = () => (
                 element={
                   <ProtectedRoute>
                     <PublicLayout><Checkout /></PublicLayout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/wishlist"
+                element={
+                  <ProtectedRoute>
+                    <PublicLayout><Wishlist /></PublicLayout>
                   </ProtectedRoute>
                 }
               />

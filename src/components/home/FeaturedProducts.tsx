@@ -1,99 +1,43 @@
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
-import { Heart, ShoppingBag, Star } from "lucide-react";
+import { ShoppingCart, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
-// Sample products - will be replaced with real data from Supabase
-const sampleProducts = [
-  {
-    id: "1",
-    name: "Silk Elegance Hijab",
-    price: 49.99,
-    rating: 4.8,
-    fabric: "Pure Silk",
-    color: "Blush Pink",
-    image: "https://images.unsplash.com/photo-1590080876351-941da357a5ec?w=400&h=500&fit=crop",
-    isNew: true,
-  },
-  {
-    id: "2",
-    name: "Chiffon Breeze Hijab",
-    price: 34.99,
-    rating: 4.6,
-    fabric: "Premium Chiffon",
-    color: "Cream",
-    image: "https://images.unsplash.com/photo-1583316174775-bd6dc0e9f298?w=400&h=500&fit=crop",
-    isNew: false,
-  },
-  {
-    id: "3",
-    name: "Jersey Comfort Hijab",
-    price: 29.99,
-    rating: 4.9,
-    fabric: "Soft Jersey",
-    color: "Dusty Rose",
-    image: "https://images.unsplash.com/photo-1596783074918-c84cb06531ca?w=400&h=500&fit=crop",
-    isNew: true,
-  },
-  {
-    id: "4",
-    name: "Cotton Everyday Hijab",
-    price: 24.99,
-    rating: 4.7,
-    fabric: "Organic Cotton",
-    color: "Sand Beige",
-    image: "https://images.unsplash.com/photo-1617627143750-d86bc21e42bb?w=400&h=500&fit=crop",
-    isNew: false,
-  },
-];
-
-const ProductCard = ({ product, index }: { product: typeof sampleProducts[0]; index: number }) => (
-  <motion.div
-    initial={{ opacity: 0, y: 20 }}
-    whileInView={{ opacity: 1, y: 0 }}
-    transition={{ delay: index * 0.1 }}
-    viewport={{ once: true }}
-    className="group"
-  >
-    <div className="relative overflow-hidden rounded-xl bg-muted aspect-[3/4] mb-4">
-      <img
-        src={product.image}
-        alt={product.name}
-        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-        loading="lazy"
-      />
-      {product.isNew && (
-        <span className="absolute top-3 left-3 bg-accent text-accent-foreground text-xs tracking-wider uppercase px-3 py-1 rounded-full font-medium">
-          New
-        </span>
-      )}
-      <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300" />
-      <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
-        <Button size="sm" className="flex-1 rounded-full text-xs tracking-wider">
-          <ShoppingBag className="h-3 w-3 mr-1" /> Add to Cart
-        </Button>
-        <Button size="icon" variant="secondary" className="rounded-full h-8 w-8">
-          <Heart className="h-3 w-3" />
-        </Button>
-      </div>
-    </div>
-    <div>
-      <p className="text-xs text-muted-foreground tracking-wider uppercase mb-1">{product.fabric}</p>
-      <Link to={`/products/${product.id}`} className="font-medium text-foreground hover:text-muted-foreground transition-colors">
-        {product.name}
-      </Link>
-      <div className="flex items-center justify-between mt-2">
-        <span className="font-medium">${product.price}</span>
-        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-          <Star className="h-3 w-3 fill-current text-luxury-gold" />
-          {product.rating}
-        </div>
-      </div>
-    </div>
-  </motion.div>
-);
+import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent } from "@/components/ui/card";
+import { AddToCartButton } from "@/components/cart/AddToCartButton";
+import { WishlistButton } from "@/components/product/WishlistButton";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const FeaturedProducts = () => {
+  const { data: products, isLoading } = useQuery({
+    queryKey: ['featured-products'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select(`
+          id, name, slug, fabric_type, is_featured,
+          product_variants (
+            id, color, size, price, stock_quantity,
+            product_images ( id, image_url, alt_text, is_primary, display_order )
+          )
+        `)
+        .eq('is_active', true)
+        .eq('is_featured', true)
+        .limit(4);
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const getImage = (product: any) => {
+    const variant = product?.product_variants?.[0];
+    const img = variant?.product_images?.find((i: any) => i.is_primary) || variant?.product_images?.[0];
+    return img?.image_url || '/placeholder.svg';
+  };
+
+  const getPrice = (product: any) => product?.product_variants?.[0]?.price || 0;
+
   return (
     <section className="py-20">
       <div className="container mx-auto px-4">
@@ -107,15 +51,87 @@ const FeaturedProducts = () => {
           <h2 className="font-luxury text-4xl md:text-5xl">Featured Hijabs</h2>
         </motion.div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-          {sampleProducts.map((product, index) => (
-            <ProductCard key={product.id} product={product} index={index} />
-          ))}
-        </div>
+        {isLoading && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+            {[...Array(4)].map((_, i) => (
+              <div key={i}>
+                <Skeleton className="aspect-[3/4] rounded-xl mb-4" />
+                <Skeleton className="h-4 w-3/4 mb-2" />
+                <Skeleton className="h-4 w-1/2" />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {!isLoading && products && products.length > 0 && (
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
+            {products.map((product: any, index: number) => {
+              const image = getImage(product);
+              const price = getPrice(product);
+              const variant = product.product_variants?.[0];
+
+              return (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  className="group"
+                >
+                  <div className="relative overflow-hidden rounded-xl bg-muted aspect-[3/4] mb-4">
+                    <Link to={`/products/${product.slug}`}>
+                      <img
+                        src={image}
+                        alt={product.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                    </Link>
+                    <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors duration-300 pointer-events-none" />
+                    <div className="absolute bottom-3 left-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex gap-2">
+                      {variant && (
+                        <AddToCartButton
+                          productId={product.id}
+                          variantId={variant.id}
+                          productName={product.name}
+                          productPrice={Number(price)}
+                          productImage={image}
+                          productColor={variant.color}
+                          productSize={variant.size}
+                          size="sm"
+                          className="flex-1 rounded-full text-xs tracking-wider"
+                        >
+                          <ShoppingCart className="h-3 w-3 mr-1" /> Add to Cart
+                        </AddToCartButton>
+                      )}
+                      <WishlistButton productId={product.id} className="h-8 w-8" />
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground tracking-wider uppercase mb-1">{product.fabric_type}</p>
+                    <Link to={`/products/${product.slug}`} className="font-medium text-foreground hover:text-muted-foreground transition-colors">
+                      {product.name}
+                    </Link>
+                    <div className="flex items-center justify-between mt-2">
+                      <span className="font-medium">₹{Number(price).toLocaleString()}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        {!isLoading && (!products || products.length === 0) && (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No featured products yet. Check back soon!</p>
+          </div>
+        )}
 
         <div className="text-center mt-12">
           <Button asChild variant="outline" size="lg" className="tracking-wider uppercase text-xs px-8 rounded-full">
-            <Link to="/shop">View All Products</Link>
+            <Link to="/products">View All Products</Link>
           </Button>
         </div>
       </div>
