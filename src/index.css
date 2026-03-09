@@ -136,4 +136,9 @@ All colors MUST be HSL.
   .text-luxury-pink {
     color: hsl(350 40% 75%);
   }
+
+  /* Safe area for iOS devices with notch/home indicator */
+  .safe-area-bottom {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
 }
