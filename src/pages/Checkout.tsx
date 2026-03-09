@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -11,7 +13,19 @@ import { useCartContext } from '@/contexts/CartContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCreateOrder } from '@/hooks/useOrders';
 import { Wallet, ChevronDown, ChevronUp } from 'lucide-react';
-import type { ShippingAddress } from '@/services/orderService';
+
+// Zod validation schema
+const shippingSchema = z.object({
+  name: z.string().trim().min(2, 'Name must be at least 2 characters').max(100, 'Name too long'),
+  address: z.string().trim().min(5, 'Address must be at least 5 characters').max(300, 'Address too long'),
+  city: z.string().trim().min(2, 'City is required').max(100, 'City name too long'),
+  state: z.string().trim().min(2, 'State is required').max(100, 'State name too long'),
+  zip: z.string().trim().min(4, 'PIN code must be at least 4 digits').max(10, 'Invalid PIN code').regex(/^\d{4,10}$/, 'PIN code must be numeric'),
+  country: z.string().trim().min(2, 'Country is required').max(100, 'Country name too long'),
+  phone: z.string().trim().min(7, 'Phone must be at least 7 digits').max(15, 'Phone too long').regex(/^\+?\d[\d\s\-()]{6,}$/, 'Invalid phone number format'),
+});
+
+type ShippingAddress = z.infer<typeof shippingSchema>;
 
 // UPI Configuration
 const UPI_ID = 'hayaathijabs@upi';
