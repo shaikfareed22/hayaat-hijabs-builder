@@ -259,7 +259,7 @@ export default function Products() {
                             productId={product.id}
                             variantId={firstVariant.id}
                             productName={product.name}
-                            productPrice={price}
+                            productPrice={lowestPrice}
                             productImage={image}
                             productColor={firstVariant.color}
                             productSize={firstVariant.size}
