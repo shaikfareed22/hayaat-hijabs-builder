@@ -61,22 +61,11 @@ export default function Products() {
 
   const hasActiveFilters = search || categoryId !== 'all';
 
-  // Get primary image and price from first variant
-  const getProductImage = (product: any) => {
-    const variant = product.variants?.[0];
-    const image = variant?.images?.find((img: any) => img.is_primary) || variant?.images?.[0];
-    return image?.image_url || '/placeholder.svg';
-  };
-
-  const getProductPrice = (product: any) => {
-    const variant = product.variants?.[0];
-    return variant?.price || 0;
-  };
-
-  const getCompareAtPrice = (product: any) => {
-    const variant = product.variants?.[0];
-    return variant?.compare_at_price;
-  };
+  // Use computed fields from API
+  const getProductImage = (product: any) => product.primary_image || '/placeholder.svg';
+  const getLowestPrice = (product: any) => product.lowest_price || 0;
+  const getHighestPrice = (product: any) => product.highest_price || 0;
+  const hasMultiplePrices = (product: any) => product.lowest_price !== product.highest_price;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -225,8 +214,9 @@ export default function Products() {
           {!isLoading && !error && products.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map((product: any) => {
-                const price = getProductPrice(product);
-                const comparePrice = getCompareAtPrice(product);
+                const lowestPrice = getLowestPrice(product);
+                const highestPrice = getHighestPrice(product);
+                const multiplePrices = hasMultiplePrices(product);
                 const image = getProductImage(product);
                 const firstVariant = product.variants?.[0];
 
@@ -254,10 +244,13 @@ export default function Products() {
                       )}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-lg">₹{price.toLocaleString()}</span>
-                          {comparePrice && comparePrice > price && (
-                            <span className="text-sm text-muted-foreground line-through">
-                              ₹{comparePrice.toLocaleString()}
+                          {multiplePrices ? (
+                            <span className="font-semibold text-lg">
+                              From ₹{lowestPrice.toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-lg">
+                              ₹{lowestPrice.toLocaleString()}
                             </span>
                           )}
                         </div>
@@ -266,7 +259,7 @@ export default function Products() {
                             productId={product.id}
                             variantId={firstVariant.id}
                             productName={product.name}
-                            productPrice={price}
+                            productPrice={lowestPrice}
                             productImage={image}
                             productColor={firstVariant.color}
                             productSize={firstVariant.size}

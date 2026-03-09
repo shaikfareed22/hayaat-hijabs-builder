@@ -157,11 +157,41 @@ async function listProducts(supabase: any, url: URL) {
     );
   }
 
+  // Transform response: normalize variants, compute lowest_price & primary_image
+  const transformed = filtered.map((product: any) => {
+    const variants = (product.product_variants || []).map((v: any) => ({
+      ...v,
+      images: v.product_images || [],
+    }));
+    const activePrices = variants.filter((v: any) => v.is_active !== false).map((v: any) => v.price).filter(Boolean);
+    const lowestPrice = activePrices.length ? Math.min(...activePrices) : 0;
+    const highestPrice = activePrices.length ? Math.max(...activePrices) : 0;
+
+    // Find primary image across all variants
+    let primaryImage = '/placeholder.svg';
+    for (const v of variants) {
+      const img = v.images?.find((i: any) => i.is_primary);
+      if (img) { primaryImage = img.image_url; break; }
+    }
+    if (primaryImage === '/placeholder.svg' && variants[0]?.images?.[0]) {
+      primaryImage = variants[0].images[0].image_url;
+    }
+
+    const { product_variants, ...rest } = product;
+    return {
+      ...rest,
+      variants,
+      lowest_price: lowestPrice,
+      highest_price: highestPrice,
+      primary_image: primaryImage,
+    };
+  });
+
   const totalCount = count || 0;
   const totalPages = Math.ceil(totalCount / limit);
 
   return jsonResponse({
-    data: filtered,
+    data: transformed,
     meta: { page, limit, total: totalCount, total_pages: totalPages },
   });
 }
