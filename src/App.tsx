@@ -15,9 +15,17 @@ import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 import Account from "./pages/Account";
 import Orders from "./pages/Orders";
-import Admin from "./pages/Admin";
 import Checkout from "./pages/Checkout";
 import OrderConfirmation from "./pages/OrderConfirmation";
+
+// Admin pages
+import AdminLayout from "./pages/admin/AdminLayout";
+import Dashboard from "./pages/admin/Dashboard";
+import AdminProducts from "./pages/admin/AdminProducts";
+import AdminCollections from "./pages/admin/AdminCollections";
+import AdminOrders from "./pages/admin/AdminOrders";
+import AdminCustomers from "./pages/admin/AdminCustomers";
+import AdminAnalytics from "./pages/admin/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
@@ -29,65 +37,118 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <CartProvider>
-            <div className="min-h-screen flex flex-col">
-              <Navbar />
-              <main className="flex-1">
-                <Routes>
-                  <Route path="/" element={<Index />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/signup" element={<Signup />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  
-                  {/* Protected routes */}
-                  <Route
-                    path="/account"
-                    element={
-                      <ProtectedRoute>
-                        <Account />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/orders"
-                    element={
-                      <ProtectedRoute>
-                        <Orders />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/checkout"
-                    element={
-                      <ProtectedRoute>
-                        <Checkout />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/order-confirmation/:orderId"
-                    element={
-                      <ProtectedRoute>
-                        <OrderConfirmation />
-                      </ProtectedRoute>
-                    }
-                  />
-                  
-                  {/* Admin-only route */}
-                  <Route
-                    path="/admin"
-                    element={
-                      <ProtectedRoute requiredRole="admin">
-                        <Admin />
-                      </ProtectedRoute>
-                    }
-                  />
-                  
-                  {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-                  <Route path="*" element={<NotFound />} />
-                </Routes>
-              </main>
-              <Footer />
-            </div>
+            <Routes>
+              {/* Public + user routes with Navbar/Footer */}
+              <Route
+                path="/"
+                element={
+                  <div className="min-h-screen flex flex-col">
+                    <Navbar />
+                    <main className="flex-1">
+                      <Index />
+                    </main>
+                    <Footer />
+                  </div>
+                }
+              />
+              <Route
+                path="/login"
+                element={
+                  <div className="min-h-screen flex flex-col">
+                    <Navbar />
+                    <main className="flex-1"><Login /></main>
+                    <Footer />
+                  </div>
+                }
+              />
+              <Route
+                path="/signup"
+                element={
+                  <div className="min-h-screen flex flex-col">
+                    <Navbar />
+                    <main className="flex-1"><Signup /></main>
+                    <Footer />
+                  </div>
+                }
+              />
+              <Route
+                path="/reset-password"
+                element={
+                  <div className="min-h-screen flex flex-col">
+                    <Navbar />
+                    <main className="flex-1"><ResetPassword /></main>
+                    <Footer />
+                  </div>
+                }
+              />
+              <Route
+                path="/account"
+                element={
+                  <ProtectedRoute>
+                    <div className="min-h-screen flex flex-col">
+                      <Navbar />
+                      <main className="flex-1"><Account /></main>
+                      <Footer />
+                    </div>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/orders"
+                element={
+                  <ProtectedRoute>
+                    <div className="min-h-screen flex flex-col">
+                      <Navbar />
+                      <main className="flex-1"><Orders /></main>
+                      <Footer />
+                    </div>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/checkout"
+                element={
+                  <ProtectedRoute>
+                    <div className="min-h-screen flex flex-col">
+                      <Navbar />
+                      <main className="flex-1"><Checkout /></main>
+                      <Footer />
+                    </div>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/order-confirmation/:orderId"
+                element={
+                  <ProtectedRoute>
+                    <div className="min-h-screen flex flex-col">
+                      <Navbar />
+                      <main className="flex-1"><OrderConfirmation /></main>
+                      <Footer />
+                    </div>
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Admin routes — full-screen layout (no Navbar/Footer) */}
+              <Route
+                path="/admin"
+                element={
+                  <ProtectedRoute requiredRole="admin">
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="products" element={<AdminProducts />} />
+                <Route path="collections" element={<AdminCollections />} />
+                <Route path="orders" element={<AdminOrders />} />
+                <Route path="customers" element={<AdminCustomers />} />
+                <Route path="analytics" element={<AdminAnalytics />} />
+              </Route>
+
+              <Route path="*" element={<NotFound />} />
+            </Routes>
           </CartProvider>
         </AuthProvider>
       </BrowserRouter>
