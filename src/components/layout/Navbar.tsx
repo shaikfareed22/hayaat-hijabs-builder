@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { CartDrawer } from "@/components/cart/CartDrawer";
+import { useCartContext } from "@/contexts/CartContext";
 
 const navLinks = [
   { name: "Home", path: "/" },
@@ -42,6 +44,7 @@ const Navbar = () => {
   };
 
   const isAdmin = profile?.role === 'admin';
+  const { cartItemCount } = useCartContext();
 
   return (
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
@@ -133,12 +136,14 @@ const Navbar = () => {
               </Link>
             )}
             
-            <Link to="/cart" className="relative p-2 hover:text-foreground text-muted-foreground transition-colors">
-              <ShoppingBag className="h-5 w-5" />
-              <span className="absolute -top-0 -right-0 bg-accent text-accent-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
-                0
-              </span>
-            </Link>
+            <CartDrawer>
+              <div className="relative">
+                <ShoppingBag className="h-5 w-5" />
+                <span className="absolute -top-1 -right-1 bg-accent text-accent-foreground text-xs rounded-full h-4 w-4 flex items-center justify-center font-medium">
+                  {cartItemCount > 99 ? '99+' : cartItemCount}
+                </span>
+              </div>
+            </CartDrawer>
           </div>
         </div>
 
