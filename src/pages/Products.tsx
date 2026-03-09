@@ -214,8 +214,9 @@ export default function Products() {
           {!isLoading && !error && products.length > 0 && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {products.map((product: any) => {
-                const price = getProductPrice(product);
-                const comparePrice = getCompareAtPrice(product);
+                const lowestPrice = getLowestPrice(product);
+                const highestPrice = getHighestPrice(product);
+                const multiplePrices = hasMultiplePrices(product);
                 const image = getProductImage(product);
                 const firstVariant = product.variants?.[0];
 
@@ -243,10 +244,13 @@ export default function Products() {
                       )}
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-lg">₹{price.toLocaleString()}</span>
-                          {comparePrice && comparePrice > price && (
-                            <span className="text-sm text-muted-foreground line-through">
-                              ₹{comparePrice.toLocaleString()}
+                          {multiplePrices ? (
+                            <span className="font-semibold text-lg">
+                              From ₹{lowestPrice.toLocaleString()}
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-lg">
+                              ₹{lowestPrice.toLocaleString()}
                             </span>
                           )}
                         </div>
