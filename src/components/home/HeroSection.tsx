@@ -44,7 +44,7 @@ const HeroSection = () => {
           </p>
           <div className="flex flex-wrap gap-4">
             <Button asChild size="lg" className="tracking-wider uppercase text-xs px-8 py-6 rounded-full">
-              <Link to="/shop">
+              <Link to="/login" state={{ from: { pathname: '/shop' } }}>
                 Shop Now <ArrowRight className="ml-2 h-4 w-4" />
               </Link>
             </Button>

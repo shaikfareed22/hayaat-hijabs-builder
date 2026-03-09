@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CheckCircle, Package, Truck, CreditCard } from 'lucide-react';
+import { CheckCircle, Package, Truck, Wallet } from 'lucide-react';
 import { useOrder } from '@/hooks/useOrders';
 
 export default function OrderConfirmation() {
@@ -47,15 +47,28 @@ export default function OrderConfirmation() {
 
   const getStatusColor = (status: string | null) => {
     switch (status?.toLowerCase()) {
+      case 'paid':
       case 'completed':
         return 'default';
       case 'processing':
-        return 'secondary';
       case 'shipped':
         return 'secondary';
       case 'pending':
+      case 'pending_payment':
       default:
         return 'outline';
+    }
+  };
+
+  const getPaymentStatusText = (status: string | null) => {
+    switch (status?.toLowerCase()) {
+      case 'paid':
+        return 'Paid';
+      case 'pending':
+      case 'pending_payment':
+        return 'Awaiting Payment';
+      default:
+        return status || 'Pending';
     }
   };
 
@@ -64,9 +77,9 @@ export default function OrderConfirmation() {
       {/* Success Header */}
       <div className="text-center mb-8">
         <CheckCircle className="w-16 h-16 text-primary mx-auto mb-4" />
-        <h1 className="text-3xl font-luxury mb-2">Order Confirmed!</h1>
+        <h1 className="text-3xl font-luxury mb-2">Your order has been placed successfully!</h1>
         <p className="text-muted-foreground">
-          Thank you for your purchase. Your order has been received and is being processed.
+          Thank you for shopping with Hayaat Hijabs. We'll notify you when your order ships.
         </p>
       </div>
 
@@ -83,34 +96,40 @@ export default function OrderConfirmation() {
           <CardContent className="space-y-4">
             <div>
               <p className="text-sm font-medium">Order ID</p>
-              <p className="text-muted-foreground font-mono">#{order.id.slice(-12)}</p>
+              <p className="text-muted-foreground font-mono text-lg">#{order.id.slice(-8).toUpperCase()}</p>
             </div>
             
             <div>
               <p className="text-sm font-medium">Order Date</p>
               <p className="text-muted-foreground">
-                {order.created_at ? new Date(order.created_at).toLocaleDateString() : 'N/A'}
+                {order.created_at ? new Date(order.created_at).toLocaleDateString('en-IN', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric',
+                }) : 'N/A'}
               </p>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-sm font-medium">Status:</span>
+              <span className="text-sm font-medium">Order Status:</span>
               <Badge variant={getStatusColor(order.order_status)}>
                 {order.order_status || 'Pending'}
               </Badge>
             </div>
 
             <div className="flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
               <span className="text-sm font-medium">Payment:</span>
               <Badge variant={getStatusColor(order.payment_status)}>
-                {order.payment_status || 'Pending'}
+                {getPaymentStatusText(order.payment_status)}
               </Badge>
             </div>
 
-            <div className="pt-2 border-t">
-              <div className="flex justify-between items-center text-lg font-semibold">
-                <span>Total:</span>
-                <span>${Number(order.total_price).toFixed(2)}</span>
+            <div className="pt-4 border-t">
+              <div className="flex justify-between items-center text-xl font-semibold">
+                <span>Total Amount:</span>
+                <span>₹{Number(order.total_price).toFixed(2)}</span>
               </div>
             </div>
           </CardContent>
@@ -126,13 +145,13 @@ export default function OrderConfirmation() {
           </CardHeader>
           <CardContent>
             <div className="space-y-1">
-              <p className="font-medium">{shippingAddress.name}</p>
+              <p className="font-medium text-lg">{shippingAddress.name}</p>
               <p className="text-muted-foreground">{shippingAddress.address}</p>
               <p className="text-muted-foreground">
                 {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
               </p>
               <p className="text-muted-foreground">{shippingAddress.country}</p>
-              <p className="text-muted-foreground">{shippingAddress.phone}</p>
+              <p className="text-muted-foreground mt-2">📞 {shippingAddress.phone}</p>
             </div>
           </CardContent>
         </Card>
@@ -141,7 +160,7 @@ export default function OrderConfirmation() {
       {/* Order Items */}
       <Card className="mb-8">
         <CardHeader>
-          <CardTitle>Order Items</CardTitle>
+          <CardTitle>Products Purchased</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -179,10 +198,10 @@ export default function OrderConfirmation() {
                   </div>
                   <div className="text-right">
                     <p className="font-medium">
-                      ${(Number(item.price) * item.quantity).toFixed(2)}
+                      ₹{(Number(item.price) * item.quantity).toFixed(2)}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      ${Number(item.price).toFixed(2)} each
+                      ₹{Number(item.price).toFixed(2)} each
                     </p>
                   </div>
                 </div>

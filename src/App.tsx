@@ -15,6 +15,7 @@ import Signup from "./pages/Signup";
 import ResetPassword from "./pages/ResetPassword";
 import Account from "./pages/Account";
 import Orders from "./pages/Orders";
+import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import ProductDetail from "./pages/ProductDetail";
 import OrderConfirmation from "./pages/OrderConfirmation";
@@ -30,6 +31,15 @@ import AdminAnalytics from "./pages/admin/AdminAnalytics";
 
 const queryClient = new QueryClient();
 
+// Layout wrapper for public pages
+const PublicLayout = ({ children }: { children: React.ReactNode }) => (
+  <div className="min-h-screen flex flex-col">
+    <Navbar />
+    <main className="flex-1">{children}</main>
+    <Footer />
+  </div>
+);
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -39,58 +49,20 @@ const App = () => (
         <AuthProvider>
           <CartProvider>
             <Routes>
-              {/* Public + user routes with Navbar/Footer */}
-              <Route
-                path="/"
-                element={
-                  <div className="min-h-screen flex flex-col">
-                    <Navbar />
-                    <main className="flex-1">
-                      <Index />
-                    </main>
-                    <Footer />
-                  </div>
-                }
-              />
-              <Route
-                path="/login"
-                element={
-                  <div className="min-h-screen flex flex-col">
-                    <Navbar />
-                    <main className="flex-1"><Login /></main>
-                    <Footer />
-                  </div>
-                }
-              />
-              <Route
-                path="/signup"
-                element={
-                  <div className="min-h-screen flex flex-col">
-                    <Navbar />
-                    <main className="flex-1"><Signup /></main>
-                    <Footer />
-                  </div>
-                }
-              />
-              <Route
-                path="/reset-password"
-                element={
-                  <div className="min-h-screen flex flex-col">
-                    <Navbar />
-                    <main className="flex-1"><ResetPassword /></main>
-                    <Footer />
-                  </div>
-                }
-              />
+              {/* Public routes */}
+              <Route path="/" element={<PublicLayout><Index /></PublicLayout>} />
+              <Route path="/login" element={<PublicLayout><Login /></PublicLayout>} />
+              <Route path="/signup" element={<PublicLayout><Signup /></PublicLayout>} />
+              <Route path="/reset-password" element={<PublicLayout><ResetPassword /></PublicLayout>} />
+              <Route path="/products/:slug" element={<PublicLayout><ProductDetail /></PublicLayout>} />
+              <Route path="/cart" element={<PublicLayout><Cart /></PublicLayout>} />
+              
+              {/* Protected user routes */}
               <Route
                 path="/account"
                 element={
                   <ProtectedRoute>
-                    <div className="min-h-screen flex flex-col">
-                      <Navbar />
-                      <main className="flex-1"><Account /></main>
-                      <Footer />
-                    </div>
+                    <PublicLayout><Account /></PublicLayout>
                   </ProtectedRoute>
                 }
               />
@@ -98,11 +70,7 @@ const App = () => (
                 path="/orders"
                 element={
                   <ProtectedRoute>
-                    <div className="min-h-screen flex flex-col">
-                      <Navbar />
-                      <main className="flex-1"><Orders /></main>
-                      <Footer />
-                    </div>
+                    <PublicLayout><Orders /></PublicLayout>
                   </ProtectedRoute>
                 }
               />
@@ -110,11 +78,7 @@ const App = () => (
                 path="/checkout"
                 element={
                   <ProtectedRoute>
-                    <div className="min-h-screen flex flex-col">
-                      <Navbar />
-                      <main className="flex-1"><Checkout /></main>
-                      <Footer />
-                    </div>
+                    <PublicLayout><Checkout /></PublicLayout>
                   </ProtectedRoute>
                 }
               />
@@ -122,22 +86,8 @@ const App = () => (
                 path="/order-confirmation/:orderId"
                 element={
                   <ProtectedRoute>
-                    <div className="min-h-screen flex flex-col">
-                      <Navbar />
-                      <main className="flex-1"><OrderConfirmation /></main>
-                      <Footer />
-                    </div>
+                    <PublicLayout><OrderConfirmation /></PublicLayout>
                   </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/products/:slug"
-                element={
-                  <div className="min-h-screen flex flex-col">
-                    <Navbar />
-                    <main className="flex-1"><ProductDetail /></main>
-                    <Footer />
-                  </div>
                 }
               />
 
