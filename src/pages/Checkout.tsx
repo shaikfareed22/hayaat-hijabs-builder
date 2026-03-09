@@ -70,7 +70,7 @@ export default function Checkout() {
   const onSubmit = async (data: ShippingAddress) => {
     setIsSubmitting(true);
     try {
-      const result = await createOrder.mutateAsync(data);
+      const result = await createOrder.mutateAsync(data as any);
       const orderId = result.data.id;
       setOrderCreated(orderId);
 
