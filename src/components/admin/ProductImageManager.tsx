@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Tables } from '@/integrations/supabase/types';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -6,10 +6,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from '@/hooks/use-toast';
-import { Upload, Star, Trash2, ImagePlus } from 'lucide-react';
+import { Upload, Star, Trash2, ImagePlus, GripVertical } from 'lucide-react';
+
+type ImageRow = Pick<Tables<'product_images'>, 'id' | 'image_url' | 'alt_text' | 'is_primary' | 'display_order' | 'variant_id'>;
 
 type VariantWithImages = Pick<Tables<'product_variants'>, 'id' | 'color' | 'size' | 'sku'> & {
-  product_images: Pick<Tables<'product_images'>, 'id' | 'image_url' | 'alt_text' | 'is_primary' | 'display_order' | 'variant_id'>[];
+  product_images: ImageRow[];
 };
 
 interface ProductImageManagerProps {
@@ -33,11 +35,20 @@ export function ProductImageManager({ open, onOpenChange, productId, productName
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
+  const [draggedImageId, setDraggedImageId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const activeVariant = useMemo(
     () => variants.find((variant) => variant.id === activeVariantId) ?? null,
     [variants, activeVariantId]
+  );
+
+  const sortedImages = useMemo(
+    () =>
+      activeVariant?.product_images
+        ?.slice()
+        .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || (a.display_order || 0) - (b.display_order || 0)) ?? [],
+    [activeVariant]
   );
 
   const loadVariants = async () => {
@@ -108,7 +119,7 @@ export function ProductImageManager({ open, onOpenChange, productId, productName
     toast({ title: 'Images uploaded' });
   };
 
-  const handleDeleteImage = async (image: VariantWithImages['product_images'][number]) => {
+  const handleDeleteImage = async (image: ImageRow) => {
     const storagePath = getStoragePathFromPublicUrl(image.image_url);
 
     if (storagePath) {
@@ -155,6 +166,48 @@ export function ProductImageManager({ open, onOpenChange, productId, productName
     toast({ title: 'Primary image updated' });
   };
 
+  const handleReorder = useCallback(
+    async (dragId: string, dropId: string) => {
+      if (dragId === dropId) return;
+
+      const oldList = [...sortedImages];
+      const dragIndex = oldList.findIndex((img) => img.id === dragId);
+      const dropIndex = oldList.findIndex((img) => img.id === dropId);
+      if (dragIndex === -1 || dropIndex === -1) return;
+
+      const reordered = [...oldList];
+      const [moved] = reordered.splice(dragIndex, 1);
+      reordered.splice(dropIndex, 0, moved);
+
+      // Optimistic update
+      if (activeVariant) {
+        setVariants((prev) =>
+          prev.map((v) =>
+            v.id === activeVariant.id
+              ? { ...v, product_images: reordered.map((img, i) => ({ ...img, display_order: i + 1 })) }
+              : v
+          )
+        );
+      }
+
+      // Batch update display_order
+      const updates = reordered.map((img, i) =>
+        supabase.from('product_images').update({ display_order: i + 1 }).eq('id', img.id)
+      );
+
+      const results = await Promise.all(updates);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) {
+        toast({ title: 'Failed to reorder', description: failed.error.message, variant: 'destructive' });
+        await loadVariants();
+        return;
+      }
+
+      onUpdated?.();
+    },
+    [sortedImages, activeVariant, onUpdated]
+  );
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="right" className="w-full sm:max-w-3xl overflow-y-auto">
@@ -176,33 +229,32 @@ export function ProductImageManager({ open, onOpenChange, productId, productName
         ) : (
           <div className="mt-6 space-y-5">
             <div className="flex flex-wrap gap-2">
-              {variants.map((variant) => {
-                const isActive = activeVariantId === variant.id;
-                return (
-                  <Button
-                    key={variant.id}
-                    type="button"
-                    variant={isActive ? 'default' : 'outline'}
-                    size="sm"
-                    onClick={() => setActiveVariantId(variant.id)}
-                  >
-                    {variant.color}{variant.size ? ` • ${variant.size}` : ''}
-                  </Button>
-                );
-              })}
+              {variants.map((variant) => (
+                <Button
+                  key={variant.id}
+                  type="button"
+                  variant={activeVariantId === variant.id ? 'default' : 'outline'}
+                  size="sm"
+                  onClick={() => setActiveVariantId(variant.id)}
+                >
+                  {variant.color}{variant.size ? ` • ${variant.size}` : ''}
+                </Button>
+              ))}
             </div>
 
             <div
               className={`rounded-xl border-2 border-dashed p-8 text-center transition-colors ${dragging ? 'border-primary bg-muted/50' : 'border-border'}`}
               onDragOver={(event) => {
                 event.preventDefault();
-                setDragging(true);
+                if (!draggedImageId) setDragging(true);
               }}
-              onDragLeave={() => setDragging(false)}
+              onDragLeave={() => { if (!draggedImageId) setDragging(false); }}
               onDrop={(event) => {
                 event.preventDefault();
-                setDragging(false);
-                handleUploadFiles(event.dataTransfer.files);
+                if (!draggedImageId) {
+                  setDragging(false);
+                  handleUploadFiles(event.dataTransfer.files);
+                }
               }}
             >
               <input
@@ -228,38 +280,62 @@ export function ProductImageManager({ open, onOpenChange, productId, productName
               <div className="space-y-3">
                 <div className="flex items-center justify-between">
                   <p className="font-medium">Image Gallery</p>
-                  <Badge variant="secondary">{activeVariant.product_images.length} images</Badge>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Drag to reorder</span>
+                    <Badge variant="secondary">{activeVariant.product_images.length} images</Badge>
+                  </div>
                 </div>
 
-                {activeVariant.product_images.length === 0 ? (
+                {sortedImages.length === 0 ? (
                   <div className="rounded-lg border p-6 text-sm text-muted-foreground text-center">No images uploaded for this variant yet.</div>
                 ) : (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                    {activeVariant.product_images
-                      .slice()
-                      .sort((a, b) => Number(b.is_primary) - Number(a.is_primary) || (a.display_order || 0) - (b.display_order || 0))
-                      .map((image) => (
-                        <div key={image.id} className="rounded-lg border overflow-hidden bg-card">
-                          <div className="aspect-[3/4] bg-muted">
-                            <img src={image.image_url} alt={image.alt_text || productName} className="w-full h-full object-cover" loading="lazy" />
-                          </div>
-                          <div className="p-2 flex items-center justify-between gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant={image.is_primary ? 'default' : 'outline'}
-                              onClick={() => handleSetPrimary(image.id)}
-                              className="flex-1"
-                            >
-                              <Star className="h-3.5 w-3.5 mr-1" />
-                              {image.is_primary ? 'Primary' : 'Set Primary'}
-                            </Button>
-                            <Button type="button" size="icon" variant="ghost" onClick={() => handleDeleteImage(image)}>
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                    {sortedImages.map((image) => (
+                      <div
+                        key={image.id}
+                        draggable
+                        onDragStart={(e) => {
+                          setDraggedImageId(image.id);
+                          e.dataTransfer.effectAllowed = 'move';
+                        }}
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          e.dataTransfer.dropEffect = 'move';
+                        }}
+                        onDrop={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (draggedImageId && draggedImageId !== image.id) {
+                            handleReorder(draggedImageId, image.id);
+                          }
+                          setDraggedImageId(null);
+                        }}
+                        onDragEnd={() => setDraggedImageId(null)}
+                        className={`rounded-lg border overflow-hidden bg-card cursor-grab active:cursor-grabbing transition-opacity ${draggedImageId === image.id ? 'opacity-50' : ''}`}
+                      >
+                        <div className="relative aspect-[3/4] bg-muted">
+                          <img src={image.image_url} alt={image.alt_text || productName} className="w-full h-full object-cover" loading="lazy" />
+                          <div className="absolute top-1.5 left-1.5 rounded bg-background/80 p-0.5">
+                            <GripVertical className="h-4 w-4 text-muted-foreground" />
                           </div>
                         </div>
-                      ))}
+                        <div className="p-2 flex items-center justify-between gap-2">
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant={image.is_primary ? 'default' : 'outline'}
+                            onClick={() => handleSetPrimary(image.id)}
+                            className="flex-1"
+                          >
+                            <Star className="h-3.5 w-3.5 mr-1" />
+                            {image.is_primary ? 'Primary' : 'Set Primary'}
+                          </Button>
+                          <Button type="button" size="icon" variant="ghost" onClick={() => handleDeleteImage(image)}>
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
