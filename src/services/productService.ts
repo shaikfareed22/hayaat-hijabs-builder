@@ -34,17 +34,25 @@ export const productService = {
       if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
     });
 
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    const session = (await supabase.auth.getSession()).data.session;
+
+    // Get session without blocking - use cached value
+    let authHeader: string | undefined;
+    try {
+      const { data } = await supabase.auth.getSession();
+      authHeader = data.session?.access_token ? `Bearer ${data.session.access_token}` : undefined;
+    } catch {
+      // Continue without auth for public product listing
+    }
 
     const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/products?${params.toString()}`,
+      `${supabaseUrl}/functions/v1/products?${params.toString()}`,
       {
         headers: {
           apikey: anonKey,
           "Content-Type": "application/json",
-          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+          ...(authHeader ? { Authorization: authHeader } : {}),
         },
       }
     );
