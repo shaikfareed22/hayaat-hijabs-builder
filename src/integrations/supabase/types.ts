@@ -14,7 +14,338 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      categories: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          name: string
+          parent_category_id: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name: string
+          parent_category_id?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          name?: string
+          parent_category_id?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_category_id_fkey"
+            columns: ["parent_category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      collections: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_order: number | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          name: string
+          slug: string
+          start_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name: string
+          slug: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_order?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          name?: string
+          slug?: string
+          start_date?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      product_collections: {
+        Row: {
+          collection_id: string
+          created_at: string
+          display_order: number | null
+          id: string
+          product_id: string
+        }
+        Insert: {
+          collection_id: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          product_id: string
+        }
+        Update: {
+          collection_id?: string
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          product_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_collections_collection_id_fkey"
+            columns: ["collection_id"]
+            isOneToOne: false
+            referencedRelation: "collections"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "product_collections_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_images: {
+        Row: {
+          alt_text: string | null
+          created_at: string
+          display_order: number | null
+          id: string
+          image_url: string
+          is_primary: boolean | null
+          variant_id: string
+        }
+        Insert: {
+          alt_text?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url: string
+          is_primary?: boolean | null
+          variant_id: string
+        }
+        Update: {
+          alt_text?: string | null
+          created_at?: string
+          display_order?: number | null
+          id?: string
+          image_url?: string
+          is_primary?: boolean | null
+          variant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_images_variant_id_fkey"
+            columns: ["variant_id"]
+            isOneToOne: false
+            referencedRelation: "product_variants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_variants: {
+        Row: {
+          color: string
+          compare_at_price: number | null
+          cost_price: number | null
+          created_at: string
+          id: string
+          is_active: boolean | null
+          low_stock_threshold: number | null
+          price: number
+          product_id: string
+          requires_shipping: boolean | null
+          size: string | null
+          sku: string
+          stock_quantity: number | null
+          updated_at: string
+          weight_grams: number | null
+        }
+        Insert: {
+          color: string
+          compare_at_price?: number | null
+          cost_price?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          low_stock_threshold?: number | null
+          price: number
+          product_id: string
+          requires_shipping?: boolean | null
+          size?: string | null
+          sku: string
+          stock_quantity?: number | null
+          updated_at?: string
+          weight_grams?: number | null
+        }
+        Update: {
+          color?: string
+          compare_at_price?: number | null
+          cost_price?: number | null
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          low_stock_threshold?: number | null
+          price?: number
+          product_id?: string
+          requires_shipping?: boolean | null
+          size?: string | null
+          sku?: string
+          stock_quantity?: number | null
+          updated_at?: string
+          weight_grams?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_variants_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      products: {
+        Row: {
+          care_instructions: string | null
+          category_id: string | null
+          created_at: string
+          description: string | null
+          fabric_type: string | null
+          features: string[] | null
+          id: string
+          is_active: boolean | null
+          is_featured: boolean | null
+          meta_description: string | null
+          meta_title: string | null
+          name: string
+          short_description: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          care_instructions?: string | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          fabric_type?: string | null
+          features?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name: string
+          short_description?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          care_instructions?: string | null
+          category_id?: string | null
+          created_at?: string
+          description?: string | null
+          fabric_type?: string | null
+          features?: string[] | null
+          id?: string
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          meta_description?: string | null
+          meta_title?: string | null
+          name?: string
+          short_description?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_profiles: {
+        Row: {
+          created_at: string
+          date_of_birth: string | null
+          display_name: string | null
+          first_name: string | null
+          id: string
+          last_name: string | null
+          marketing_consent: boolean | null
+          phone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date_of_birth?: string | null
+          display_name?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          marketing_consent?: boolean | null
+          phone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date_of_birth?: string | null
+          display_name?: string | null
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          marketing_consent?: boolean | null
+          phone?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
