@@ -44,6 +44,7 @@ export interface Order {
 
 export interface CreateOrderRequest {
   shipping_address: ShippingAddress;
+  coupon_code?: string;
 }
 
 export interface OrdersResponse {
@@ -85,9 +86,10 @@ class OrderService {
     return response.json();
   }
 
-  async createOrder(shippingAddress: ShippingAddress): Promise<{ data: Order; message: string }> {
+  async createOrder(shippingAddress: ShippingAddress, couponCode?: string): Promise<{ data: Order; message: string }> {
     return this.makeRequest<{ data: Order; message: string }>('POST', '', {
       shipping_address: shippingAddress,
+      coupon_code: couponCode,
     });
   }
 
