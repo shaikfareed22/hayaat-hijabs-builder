@@ -67,7 +67,6 @@ export default function ProductDetail() {
       .flatMap((variant) => variant.product_images);
   }, [product, selectedVariant, selectedColor]);
 
-  // Get the primary image for cart
   const primaryImage = useMemo(() => {
     const images = selectedVariant?.product_images || imagesForGallery;
     const primary = images.find(img => img.is_primary) || images[0];
@@ -82,7 +81,7 @@ export default function ProductDetail() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-10 grid grid-cols-1 md:grid-cols-2 gap-8">
+      <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10 grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8">
         <Skeleton className="w-full aspect-[3/4] rounded-xl" />
         <div className="space-y-4">
           <Skeleton className="h-8 w-3/4" />
@@ -106,15 +105,15 @@ export default function ProductDetail() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-10">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-10">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
         <ProductGallery images={imagesForGallery} productName={product.name} />
 
-        <div className="space-y-6">
+        <div className="space-y-5 sm:space-y-6">
           <div>
-            <h1 className="text-3xl font-luxury font-semibold">{product.name}</h1>
-            {product.fabric_type && <p className="text-muted-foreground mt-1">{product.fabric_type}</p>}
-            <p className="text-2xl font-semibold mt-3">₹{Number(selectedVariant?.price || 0).toFixed(2)}</p>
+            <h1 className="text-2xl sm:text-3xl font-luxury font-semibold">{product.name}</h1>
+            {product.fabric_type && <p className="text-muted-foreground mt-1 text-sm sm:text-base">{product.fabric_type}</p>}
+            <p className="text-xl sm:text-2xl font-semibold mt-2 sm:mt-3">₹{Number(selectedVariant?.price || 0).toFixed(2)}</p>
             {selectedVariant && (selectedVariant.stock_quantity || 0) < 5 && (selectedVariant.stock_quantity || 0) > 0 && (
               <Badge variant="secondary" className="mt-2">
                 Only {selectedVariant.stock_quantity} left
@@ -127,7 +126,7 @@ export default function ProductDetail() {
             )}
           </div>
 
-          {product.short_description && <p className="text-muted-foreground">{product.short_description}</p>}
+          {product.short_description && <p className="text-muted-foreground text-sm sm:text-base">{product.short_description}</p>}
 
           {colors.length > 0 && (
             <div className="space-y-2">
@@ -143,7 +142,7 @@ export default function ProductDetail() {
                         product.product_variants.find((variant) => variant.color === color)?.size || '';
                       setSelectedSize(nextSize);
                     }}
-                    className={`px-3 py-2 rounded-md border text-sm transition-colors ${selectedColor === color ? 'border-primary bg-muted' : 'border-border hover:bg-muted'}`}
+                    className={`px-4 py-2.5 rounded-md border text-sm transition-colors active:scale-95 ${selectedColor === color ? 'border-primary bg-muted' : 'border-border hover:bg-muted'}`}
                   >
                     {color}
                   </button>
@@ -161,7 +160,7 @@ export default function ProductDetail() {
                     key={size || 'default'}
                     type="button"
                     onClick={() => setSelectedSize(size)}
-                    className={`px-3 py-2 rounded-md border text-sm transition-colors ${selectedSize === size ? 'border-primary bg-muted' : 'border-border hover:bg-muted'}`}
+                    className={`px-4 py-2.5 rounded-md border text-sm transition-colors active:scale-95 ${selectedSize === size ? 'border-primary bg-muted' : 'border-border hover:bg-muted'}`}
                   >
                     {size || 'Standard'}
                   </button>
@@ -170,19 +169,21 @@ export default function ProductDetail() {
             </div>
           )}
 
+          {/* Desktop Add to Cart */}
           {selectedVariant && (
-            <AddToCartButton
-              productId={product.id}
-              variantId={selectedVariant.id}
-              disabled={(selectedVariant.stock_quantity || 0) <= 0}
-              className="w-full md:w-auto"
-              // Props for guest cart
-              productName={product.name}
-              productPrice={Number(selectedVariant.price)}
-              productImage={primaryImage}
-              productColor={selectedVariant.color}
-              productSize={selectedVariant.size}
-            />
+            <div className="hidden md:block">
+              <AddToCartButton
+                productId={product.id}
+                variantId={selectedVariant.id}
+                disabled={(selectedVariant.stock_quantity || 0) <= 0}
+                className="w-full md:w-auto h-12 text-base px-8"
+                productName={product.name}
+                productPrice={Number(selectedVariant.price)}
+                productImage={primaryImage}
+                productColor={selectedVariant.color}
+                productSize={selectedVariant.size}
+              />
+            </div>
           )}
 
           <div className="pt-4 border-t space-y-3">
@@ -201,6 +202,34 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+
+      {/* Sticky Mobile Add to Cart Bar */}
+      {selectedVariant && (
+        <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-background/95 backdrop-blur-md border-t border-border px-4 py-3 safe-area-bottom">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-lg font-semibold">₹{Number(selectedVariant.price).toFixed(2)}</p>
+              <p className="text-xs text-muted-foreground truncate">
+                {selectedColor}{selectedSize ? ` · ${selectedSize}` : ''}
+                {(selectedVariant.stock_quantity || 0) <= 0 && ' · Out of stock'}
+              </p>
+            </div>
+            <AddToCartButton
+              productId={product.id}
+              variantId={selectedVariant.id}
+              disabled={(selectedVariant.stock_quantity || 0) <= 0}
+              className="h-12 px-6 text-base shrink-0"
+              productName={product.name}
+              productPrice={Number(selectedVariant.price)}
+              productImage={primaryImage}
+              productColor={selectedVariant.color}
+              productSize={selectedVariant.size}
+            />
+          </div>
+        </div>
+      )}
+      {/* Spacer for sticky bar on mobile */}
+      <div className="h-20 md:hidden" />
     </div>
   );
 }

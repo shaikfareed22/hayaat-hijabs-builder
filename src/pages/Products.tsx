@@ -26,7 +26,6 @@ export default function Products() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [showFilters, setShowFilters] = useState(false);
 
-  // Fetch categories for filter
   const { data: categories } = useQuery({
     queryKey: ['categories'],
     queryFn: async () => {
@@ -40,7 +39,6 @@ export default function Products() {
     },
   });
 
-  // Build filters object
   const filters = useMemo(() => ({
     search: search || undefined,
     category_id: categoryId !== 'all' ? categoryId : undefined,
@@ -61,65 +59,62 @@ export default function Products() {
 
   const hasActiveFilters = search || categoryId !== 'all';
 
-  // Use computed fields from API
   const getProductImage = (product: any) => product.primary_image || '/placeholder.svg';
   const getLowestPrice = (product: any) => product.lowest_price || 0;
   const getHighestPrice = (product: any) => product.highest_price || 0;
   const hasMultiplePrices = (product: any) => product.lowest_price !== product.highest_price;
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-3 sm:px-4 py-6 sm:py-8">
       {/* Header */}
-      <div className="mb-8">
-        <h1 className="font-luxury text-4xl md:text-5xl mb-4">Our Collection</h1>
-        <p className="text-muted-foreground max-w-2xl">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="font-luxury text-3xl sm:text-4xl md:text-5xl mb-2 sm:mb-4">Our Collection</h1>
+        <p className="text-muted-foreground text-sm sm:text-base max-w-2xl">
           Discover our curated selection of premium hijabs, crafted with the finest fabrics 
           for the modern, confident woman.
         </p>
       </div>
 
       {/* Search & Filter Bar */}
-      <div className="flex flex-col md:flex-row gap-4 mb-8">
-        {/* Search */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 mb-6 sm:mb-8">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search hijabs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
+            className="pl-10 h-11"
           />
         </div>
 
-        {/* Sort */}
-        <Select value={`${sortBy}-${sortOrder}`} onValueChange={(val) => {
-          const [by, order] = val.split('-');
-          setSortBy(by);
-          setSortOrder(order as 'asc' | 'desc');
-        }}>
-          <SelectTrigger className="w-full md:w-48">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="created_at-desc">Newest First</SelectItem>
-            <SelectItem value="created_at-asc">Oldest First</SelectItem>
-            <SelectItem value="name-asc">Name A-Z</SelectItem>
-            <SelectItem value="name-desc">Name Z-A</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="flex gap-2">
+          <Select value={`${sortBy}-${sortOrder}`} onValueChange={(val) => {
+            const [by, order] = val.split('-');
+            setSortBy(by);
+            setSortOrder(order as 'asc' | 'desc');
+          }}>
+            <SelectTrigger className="w-full sm:w-48 h-11">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="created_at-desc">Newest First</SelectItem>
+              <SelectItem value="created_at-asc">Oldest First</SelectItem>
+              <SelectItem value="name-asc">Name A-Z</SelectItem>
+              <SelectItem value="name-desc">Name Z-A</SelectItem>
+            </SelectContent>
+          </Select>
 
-        {/* Filter Toggle (Mobile) */}
-        <Button
-          variant="outline"
-          onClick={() => setShowFilters(!showFilters)}
-          className="md:hidden"
-        >
-          <SlidersHorizontal className="h-4 w-4 mr-2" />
-          Filters
-        </Button>
+          <Button
+            variant="outline"
+            onClick={() => setShowFilters(!showFilters)}
+            className="md:hidden h-11 px-3"
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-8">
+      <div className="flex flex-col md:flex-row gap-6 sm:gap-8">
         {/* Sidebar Filters */}
         <aside className={`w-full md:w-64 shrink-0 ${showFilters ? 'block' : 'hidden md:block'}`}>
           <Card>
@@ -134,11 +129,10 @@ export default function Products() {
                 )}
               </div>
 
-              {/* Category Filter */}
               <div className="space-y-2">
                 <Label>Category</Label>
                 <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger>
+                  <SelectTrigger className="h-11">
                     <SelectValue placeholder="All Categories" />
                   </SelectTrigger>
                   <SelectContent>
@@ -157,7 +151,6 @@ export default function Products() {
 
         {/* Product Grid */}
         <div className="flex-1">
-          {/* Active Filters */}
           {hasActiveFilters && (
             <div className="flex flex-wrap gap-2 mb-4">
               {search && (
@@ -175,13 +168,12 @@ export default function Products() {
             </div>
           )}
 
-          {/* Loading State */}
           {isLoading && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {[...Array(6)].map((_, i) => (
                 <Card key={i} className="overflow-hidden">
-                  <Skeleton className="aspect-square" />
-                  <CardContent className="p-4 space-y-2">
+                  <Skeleton className="aspect-[3/4]" />
+                  <CardContent className="p-3 sm:p-4 space-y-2">
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
                   </CardContent>
@@ -190,29 +182,26 @@ export default function Products() {
             </div>
           )}
 
-          {/* Error State */}
           {error && (
             <div className="text-center py-12">
               <p className="text-destructive mb-4">Failed to load products</p>
-              <Button onClick={() => window.location.reload()}>Try Again</Button>
+              <Button onClick={() => window.location.reload()} className="h-11 min-w-[120px]">Try Again</Button>
             </div>
           )}
 
-          {/* Empty State */}
           {!isLoading && !error && products.length === 0 && (
             <div className="text-center py-12">
               <p className="text-muted-foreground mb-4">No products found</p>
               {hasActiveFilters && (
-                <Button variant="outline" onClick={clearFilters}>
+                <Button variant="outline" onClick={clearFilters} className="h-11">
                   Clear Filters
                 </Button>
               )}
             </div>
           )}
 
-          {/* Products Grid */}
           {!isLoading && !error && products.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
               {products.map((product: any) => {
                 const lowestPrice = getLowestPrice(product);
                 const highestPrice = getHighestPrice(product);
@@ -223,33 +212,34 @@ export default function Products() {
                 return (
                   <Card key={product.id} className="group overflow-hidden">
                     <Link to={`/products/${product.slug}`}>
-                      <div className="aspect-square overflow-hidden bg-muted">
+                      <div className="aspect-[3/4] overflow-hidden bg-muted">
                         <img
                           src={image}
                           alt={product.name}
                           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          loading="lazy"
                         />
                       </div>
                     </Link>
-                    <CardContent className="p-4">
+                    <CardContent className="p-3 sm:p-4">
                       <Link to={`/products/${product.slug}`}>
-                        <h3 className="font-medium text-lg mb-1 hover:text-primary transition-colors line-clamp-1">
+                        <h3 className="font-medium text-sm sm:text-lg mb-0.5 sm:mb-1 hover:text-primary transition-colors line-clamp-1">
                           {product.name}
                         </h3>
                       </Link>
                       {product.short_description && (
-                        <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                        <p className="text-xs sm:text-sm text-muted-foreground mb-2 sm:mb-3 line-clamp-1 sm:line-clamp-2">
                           {product.short_description}
                         </p>
                       )}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
+                      <div className="flex items-center justify-between gap-1">
+                        <div>
                           {multiplePrices ? (
-                            <span className="font-semibold text-lg">
+                            <span className="font-semibold text-sm sm:text-lg">
                               From ₹{lowestPrice.toLocaleString()}
                             </span>
                           ) : (
-                            <span className="font-semibold text-lg">
+                            <span className="font-semibold text-sm sm:text-lg">
                               ₹{lowestPrice.toLocaleString()}
                             </span>
                           )}
@@ -263,7 +253,8 @@ export default function Products() {
                             productImage={image}
                             productColor={firstVariant.color}
                             productSize={firstVariant.size}
-                            size="sm"
+                            size="icon"
+                            className="h-9 w-9 sm:h-10 sm:w-10 rounded-full shrink-0"
                           >
                             <ShoppingCart className="h-4 w-4" />
                           </AddToCartButton>
@@ -276,9 +267,8 @@ export default function Products() {
             </div>
           )}
 
-          {/* Pagination info */}
           {productsData?.meta && (
-            <div className="mt-8 text-center text-sm text-muted-foreground">
+            <div className="mt-6 sm:mt-8 text-center text-sm text-muted-foreground">
               Showing {products.length} of {productsData.meta.total} products
             </div>
           )}

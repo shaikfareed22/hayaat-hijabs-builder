@@ -25,7 +25,6 @@ export function CartDrawer({ children }: CartDrawerProps) {
   const items = cartData?.items || [];
   const subtotal = cartData?.subtotal || "0.00";
 
-  // Helper to determine item properties based on guest or auth
   const getItemProps = (item: GuestCartItem | AuthCartItem) => {
     if (isGuest) {
       const guestItem = item as GuestCartItem;
@@ -88,7 +87,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
           {children}
         </button>
       </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-md">
+      <SheetContent side="right" className="w-full sm:max-w-md flex flex-col">
         <SheetHeader>
           <SheetTitle className="flex items-center gap-2">
             <ShoppingBag className="h-5 w-5" />
@@ -96,9 +95,9 @@ export function CartDrawer({ children }: CartDrawerProps) {
           </SheetTitle>
         </SheetHeader>
 
-        <div className="mt-6 space-y-6">
+        <div className="flex-1 flex flex-col mt-4 overflow-hidden">
           {isLoading ? (
-            <div className="space-y-4">
+            <div className="space-y-4 p-2">
               {[1, 2, 3].map((i) => (
                 <div key={i} className="animate-pulse">
                   <div className="flex gap-4">
@@ -112,36 +111,32 @@ export function CartDrawer({ children }: CartDrawerProps) {
               ))}
             </div>
           ) : items.length === 0 ? (
-            <div className="text-center py-12">
+            <div className="text-center py-12 flex-1 flex flex-col items-center justify-center">
               <ShoppingBag className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
               <h3 className="text-lg font-medium text-foreground mb-2">Your cart is empty</h3>
               <p className="text-muted-foreground text-sm mb-6">
                 Add some beautiful hijabs to get started
               </p>
-              <Button 
-                onClick={() => setIsOpen(false)} 
-                className="w-full"
-                asChild
-              >
+              <Button onClick={() => setIsOpen(false)} className="w-full h-12" asChild>
                 <Link to="/">Continue Shopping</Link>
               </Button>
             </div>
           ) : (
             <>
-              {/* Cart Items */}
-              <div className="flex-1 space-y-4 max-h-96 overflow-y-auto">
+              {/* Cart Items - scrollable */}
+              <div className="flex-1 overflow-y-auto space-y-3 pr-1 -mr-1">
                 {items.map((item) => {
                   const props = getItemProps(item);
                   return (
-                    <div key={props.id} className="flex gap-3 border-b pb-4">
+                    <div key={props.id} className="flex gap-3 border-b pb-3">
                       <img
                         src={props.image}
                         alt={props.name}
-                        className="w-16 h-16 object-cover rounded-md"
+                        className="w-16 h-20 object-cover rounded-md shrink-0"
                       />
                       <div className="flex-1 min-w-0">
                         <h4 className="font-medium text-sm truncate">{props.name}</h4>
-                        <div className="flex items-center gap-1 mt-1">
+                        <div className="flex items-center gap-1 mt-1 flex-wrap">
                           <Badge variant="outline" className="text-xs">{props.color}</Badge>
                           {props.size && (
                             <Badge variant="outline" className="text-xs">{props.size}</Badge>
@@ -150,21 +145,21 @@ export function CartDrawer({ children }: CartDrawerProps) {
                         <p className="font-semibold text-sm mt-1">₹{props.price.toFixed(2)}</p>
                         
                         <div className="flex items-center justify-between mt-2">
-                          <div className="flex items-center gap-1 border rounded">
+                          <div className="flex items-center gap-0 border rounded-md">
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6"
+                              className="h-8 w-8 active:scale-90"
                               onClick={() => handleUpdateQuantity(props.id, props.quantity - 1)}
                               disabled={props.quantity <= 1}
                             >
                               <Minus className="h-3 w-3" />
                             </Button>
-                            <span className="w-6 text-center text-sm">{props.quantity}</span>
+                            <span className="w-8 text-center text-sm font-medium">{props.quantity}</span>
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-6 w-6"
+                              className="h-8 w-8 active:scale-90"
                               onClick={() => handleUpdateQuantity(props.id, props.quantity + 1)}
                             >
                               <Plus className="h-3 w-3" />
@@ -173,10 +168,10 @@ export function CartDrawer({ children }: CartDrawerProps) {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 text-destructive"
+                            className="h-8 w-8 text-destructive active:scale-90"
                             onClick={() => handleRemove(props.id)}
                           >
-                            <Trash2 className="h-3 w-3" />
+                            <Trash2 className="h-3.5 w-3.5" />
                           </Button>
                         </div>
                       </div>
@@ -185,8 +180,8 @@ export function CartDrawer({ children }: CartDrawerProps) {
                 })}
               </div>
 
-              {/* Cart Summary */}
-              <div className="space-y-4 pt-4 border-t">
+              {/* Cart Summary - sticky bottom */}
+              <div className="space-y-3 pt-4 border-t mt-3 shrink-0">
                 <div className="flex justify-between items-center">
                   <span className="text-base font-medium">Subtotal</span>
                   <span className="text-lg font-semibold">₹{subtotal}</span>
@@ -196,9 +191,9 @@ export function CartDrawer({ children }: CartDrawerProps) {
                   Shipping and taxes calculated at checkout
                 </p>
 
-                <div className="space-y-3">
+                <div className="space-y-2">
                   <Button 
-                    className="w-full h-12" 
+                    className="w-full h-12 text-base active:scale-[0.98] transition-transform" 
                     size="lg"
                     onClick={handleCheckout}
                   >
@@ -207,7 +202,7 @@ export function CartDrawer({ children }: CartDrawerProps) {
                   
                   <Button 
                     variant="outline" 
-                    className="w-full" 
+                    className="w-full h-11" 
                     onClick={() => setIsOpen(false)}
                     asChild
                   >
