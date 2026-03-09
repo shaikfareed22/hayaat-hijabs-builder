@@ -67,12 +67,12 @@ export const productService = {
 
   /** GET /products/:id — single product */
   async getById(id: string) {
-    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const session = (await supabase.auth.getSession()).data.session;
 
     const res = await fetch(
-      `https://${projectId}.supabase.co/functions/v1/products/${id}`,
+      `${supabaseUrl}/functions/v1/products/${id}`,
       {
         headers: {
           apikey: anonKey,
