@@ -8,6 +8,7 @@ const collections = [
     description: "Luxurious pure silk hijabs",
     image: "https://images.unsplash.com/photo-1583316174775-bd6dc0e9f298?w=600&h=800&fit=crop",
     link: "/collections/silk",
+    slug: "silk",
   },
   {
     name: "Everyday Essentials",
