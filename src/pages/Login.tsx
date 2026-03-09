@@ -17,8 +17,8 @@ export default function Login() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Get the redirect path from location state
-  const from = location.state?.from?.pathname || (profile?.role === 'admin' ? '/admin' : '/account');
+  // Get the redirect path from location state, default to home page for shopping
+  const from = location.state?.from?.pathname || '/#featured';
 
   // Redirect if already logged in
   if (user) {
