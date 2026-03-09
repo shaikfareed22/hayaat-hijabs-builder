@@ -105,6 +105,35 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Custom luxury typography and utilities */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap');
+
+@layer utilities {
+  .font-luxury {
+    font-family: 'Playfair Display', serif;
+  }
+  
+  .gradient-luxury {
+    background: var(--gradient-luxury);
+  }
+  
+  .gradient-warm {
+    background: var(--gradient-warm);
+  }
+  
+  .shadow-luxury {
+    box-shadow: var(--shadow-luxury);
+  }
+  
+  .text-luxury-gold {
+    color: hsl(25 30% 75%);
+  }
+  
+  .text-luxury-pink {
+    color: hsl(350 40% 75%);
   }
 }
