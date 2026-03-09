@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
+import { Search, SlidersHorizontal, X, ShoppingCart } from 'lucide-react';
 import { AddToCartButton } from '@/components/cart/AddToCartButton';
 
 export default function Products() {
@@ -263,11 +263,17 @@ export default function Products() {
                         </div>
                         {firstVariant && (
                           <AddToCartButton
-                            product={product}
-                            variant={firstVariant}
+                            productId={product.id}
+                            variantId={firstVariant.id}
+                            productName={product.name}
+                            productPrice={price}
+                            productImage={image}
+                            productColor={firstVariant.color}
+                            productSize={firstVariant.size}
                             size="sm"
-                            showIcon
-                          />
+                          >
+                            <ShoppingCart className="h-4 w-4" />
+                          </AddToCartButton>
                         )}
                       </div>
                     </CardContent>
