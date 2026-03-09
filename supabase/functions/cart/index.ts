@@ -1,4 +1,11 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.98.0'
+import {
+  checkRateLimit,
+  rateLimitResponse,
+  getClientIP,
+  sanitizeUUID,
+  sanitizeInt,
+} from '../_shared/security.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -7,43 +14,52 @@ const corsHeaders = {
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, { headers: corsHeaders })
   }
 
   try {
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
-      {
-        global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
-        },
-      }
-    )
+    // ── Rate Limiting ──
+    const clientIP = getClientIP(req)
+    const rl = checkRateLimit(`cart:${clientIP}`, { windowMs: 60_000, maxRequests: 60 })
+    if (!rl.allowed) return rateLimitResponse(rl.resetAt)
 
-    // Authenticate user
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
+    const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+
+    // ── Auth ──
     const authHeader = req.headers.get('Authorization')
     if (!authHeader?.startsWith('Bearer ')) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
-        status: 401, 
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     const token = authHeader.replace('Bearer ', '')
-    const { data: claims, error: authError } = await supabaseClient.auth.getClaims(token)
-    if (authError || !claims?.sub) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { 
-        status: 401, 
+
+    // Verify token server-side with admin client
+    const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    })
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+    if (authError || !user) {
+      return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
+        status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    const userId = claims.sub
+    const userId = user.id
+
+    // User-scoped client for RLS
+    const supabaseClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
+    })
+
     const { method } = req
 
     if (method === 'GET') {
-      // Fetch user's cart items with product and variant details
       const { data: cartItems, error } = await supabaseClient
         .from('cart_items')
         .select(`
@@ -51,15 +67,8 @@ Deno.serve(async (req) => {
           product_variants (
             *,
             products (
-              id,
-              name,
-              slug,
-              short_description,
-              product_images (
-                image_url,
-                alt_text,
-                is_primary
-              )
+              id, name, slug, short_description,
+              product_images ( image_url, alt_text, is_primary )
             )
           )
         `)
@@ -73,14 +82,13 @@ Deno.serve(async (req) => {
         })
       }
 
-      // Calculate totals
       const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
-      const subtotal = cartItems.reduce((sum, item) => 
+      const subtotal = cartItems.reduce((sum, item) =>
         sum + (item.quantity * parseFloat(item.product_variants.price))
       , 0)
 
-      return new Response(JSON.stringify({ 
-        items: cartItems, 
+      return new Response(JSON.stringify({
+        items: cartItems,
         itemCount,
         subtotal: subtotal.toFixed(2)
       }), {
@@ -90,87 +98,120 @@ Deno.serve(async (req) => {
     }
 
     if (method === 'POST') {
-      // Add item to cart or update quantity if exists
-      const { product_id, variant_id, quantity = 1 } = await req.json()
+      // Stricter rate limit for writes
+      const writeRl = checkRateLimit(`cart:write:${userId}`, { windowMs: 60_000, maxRequests: 30 })
+      if (!writeRl.allowed) return rateLimitResponse(writeRl.resetAt)
+
+      let body: any
+      try { body = await req.json() } catch { 
+        return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+
+      const product_id = sanitizeUUID(body.product_id)
+      const variant_id = sanitizeUUID(body.variant_id)
+      const quantity = sanitizeInt(body.quantity || 1, 1, 50)
 
       if (!product_id || !variant_id) {
-        return new Response(JSON.stringify({ error: 'product_id and variant_id are required' }), {
+        return new Response(JSON.stringify({ error: 'Valid product_id and variant_id are required' }), {
           status: 400,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
 
-      // Check if item already exists in cart
+      // Verify variant exists and is active with sufficient stock
+      const { data: variant, error: variantError } = await supabaseClient
+        .from('product_variants')
+        .select('id, price, stock_quantity, is_active, product_id')
+        .eq('id', variant_id)
+        .eq('product_id', product_id)
+        .eq('is_active', true)
+        .single()
+
+      if (variantError || !variant) {
+        return new Response(JSON.stringify({ error: 'Product variant not found or inactive' }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      if ((variant.stock_quantity || 0) < quantity) {
+        return new Response(JSON.stringify({ error: `Insufficient stock (available: ${variant.stock_quantity})` }), {
+          status: 400,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
+
+      // Check existing cart item
       const { data: existingItem } = await supabaseClient
         .from('cart_items')
-        .select('*')
+        .select('id, quantity')
         .eq('user_id', userId)
         .eq('product_id', product_id)
         .eq('variant_id', variant_id)
         .single()
 
       if (existingItem) {
-        // Update existing item quantity
+        const newQty = Math.min(existingItem.quantity + quantity, 50)
         const { data, error } = await supabaseClient
           .from('cart_items')
-          .update({ quantity: existingItem.quantity + quantity })
+          .update({ quantity: newQty })
           .eq('id', existingItem.id)
           .select()
           .single()
 
         if (error) {
           return new Response(JSON.stringify({ error: error.message }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          })
+        }
+        return new Response(JSON.stringify({ data, message: 'Cart updated' }), {
+          status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      } else {
+        // Limit total cart items per user
+        const { count } = await supabaseClient
+          .from('cart_items')
+          .select('id', { count: 'exact', head: true })
+          .eq('user_id', userId)
+
+        if ((count || 0) >= 50) {
+          return new Response(JSON.stringify({ error: 'Cart limit reached (max 50 items)' }), {
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           })
         }
 
-        return new Response(JSON.stringify({ data, message: 'Cart updated' }), {
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
-      } else {
-        // Create new cart item
         const { data, error } = await supabaseClient
           .from('cart_items')
-          .insert({
-            user_id: userId,
-            product_id,
-            variant_id,
-            quantity
-          })
+          .insert({ user_id: userId, product_id, variant_id, quantity })
           .select()
           .single()
 
         if (error) {
           return new Response(JSON.stringify({ error: error.message }), {
-            status: 400,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+            status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
           })
         }
-
         return new Response(JSON.stringify({ data, message: 'Item added to cart' }), {
-          status: 201,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
     }
 
     if (method === 'PUT') {
-      // Update item quantity
-      const { cart_item_id, quantity } = await req.json()
+      const writeRl = checkRateLimit(`cart:write:${userId}`, { windowMs: 60_000, maxRequests: 30 })
+      if (!writeRl.allowed) return rateLimitResponse(writeRl.resetAt)
 
-      if (!cart_item_id || quantity === undefined) {
-        return new Response(JSON.stringify({ error: 'cart_item_id and quantity are required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-        })
+      let body: any
+      try { body = await req.json() } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       }
 
-      if (quantity <= 0) {
-        return new Response(JSON.stringify({ error: 'Quantity must be greater than 0' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      const cart_item_id = sanitizeUUID(body.cart_item_id)
+      const quantity = sanitizeInt(body.quantity, 1, 50)
+
+      if (!cart_item_id) {
+        return new Response(JSON.stringify({ error: 'Valid cart_item_id is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
 
@@ -178,31 +219,30 @@ Deno.serve(async (req) => {
         .from('cart_items')
         .update({ quantity })
         .eq('id', cart_item_id)
-        .eq('user_id', userId) // Ensure user owns this cart item
+        .eq('user_id', userId)
         .select()
         .single()
 
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-
       return new Response(JSON.stringify({ data, message: 'Cart item updated' }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     if (method === 'DELETE') {
-      // Remove item from cart
-      const { cart_item_id } = await req.json()
+      let body: any
+      try { body = await req.json() } catch {
+        return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
 
+      const cart_item_id = sanitizeUUID(body.cart_item_id)
       if (!cart_item_id) {
-        return new Response(JSON.stringify({ error: 'cart_item_id is required' }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        return new Response(JSON.stringify({ error: 'Valid cart_item_id is required' }), {
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
 
@@ -210,32 +250,26 @@ Deno.serve(async (req) => {
         .from('cart_items')
         .delete()
         .eq('id', cart_item_id)
-        .eq('user_id', userId) // Ensure user owns this cart item
+        .eq('user_id', userId)
         .select()
 
       if (error) {
         return new Response(JSON.stringify({ error: error.message }), {
-          status: 400,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
         })
       }
-
       return new Response(JSON.stringify({ data, message: 'Item removed from cart' }), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 405, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
-
   } catch (error) {
     console.error('Error in cart function:', error)
     return new Response(JSON.stringify({ error: 'Internal server error' }), {
-      status: 500,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
   }
 })
