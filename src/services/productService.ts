@@ -34,14 +34,6 @@ export const productService = {
       if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
     });
 
-    const { data, error } = await supabase.functions.invoke("products", {
-      method: "GET",
-      headers: { "Content-Type": "application/json" },
-      body: null,
-    });
-
-    // supabase.functions.invoke doesn't support query params natively,
-    // so we use direct fetch for GET requests
     const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
     const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
     const session = (await supabase.auth.getSession()).data.session;
