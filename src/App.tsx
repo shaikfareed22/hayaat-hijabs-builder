@@ -18,6 +18,7 @@ import Orders from "./pages/Orders";
 import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import ProductDetail from "./pages/ProductDetail";
+import Products from "./pages/Products";
 import OrderConfirmation from "./pages/OrderConfirmation";
 
 // Admin pages
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/signup" element={<PublicLayout><Signup /></PublicLayout>} />
               <Route path="/reset-password" element={<PublicLayout><ResetPassword /></PublicLayout>} />
               <Route path="/products/:slug" element={<PublicLayout><ProductDetail /></PublicLayout>} />
+              <Route path="/products" element={<PublicLayout><Products /></PublicLayout>} />
               <Route path="/cart" element={<PublicLayout><Cart /></PublicLayout>} />
               
               {/* Protected user routes */}
