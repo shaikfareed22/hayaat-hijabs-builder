@@ -48,7 +48,7 @@ const Navbar = () => {
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
       {/* Top banner */}
       <div className="bg-primary text-primary-foreground text-center py-2 text-xs tracking-widest uppercase font-sans">
-        Free shipping on orders over $75 · Elegance delivered to your door
+        Free shipping on orders over ₹999 · Elegance delivered to your door
       </div>
 
       <nav className="container mx-auto px-4">
