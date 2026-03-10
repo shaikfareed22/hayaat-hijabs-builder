@@ -48,7 +48,7 @@ const Navbar = () => {
     <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
       {/* Top banner */}
       <div className="bg-primary text-primary-foreground text-center py-2 text-xs tracking-widest uppercase font-sans">
-        Free shipping on orders over $75 · Elegance delivered to your door
+        Free shipping on orders over ₹999 · Elegance delivered to your door
       </div>
 
       <nav className="container mx-auto px-4">
@@ -126,12 +126,9 @@ const Navbar = () => {
                 </button>
               </>
             ) : (
-              <Link
-                to="/login"
-                className="p-2 hover:text-foreground text-muted-foreground transition-colors hidden sm:block"
-              >
-                <User className="h-5 w-5" />
-              </Link>
+              <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex">
+                <Link to="/login">Login</Link>
+              </Button>
             )}
             
             <CartDrawer>
