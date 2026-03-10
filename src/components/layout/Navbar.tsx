@@ -126,12 +126,9 @@ const Navbar = () => {
                 </button>
               </>
             ) : (
-              <Link
-                to="/login"
-                className="p-2 hover:text-foreground text-muted-foreground transition-colors hidden sm:block"
-              >
-                <User className="h-5 w-5" />
-              </Link>
+              <Button variant="outline" size="sm" asChild className="hidden sm:inline-flex">
+                <Link to="/login">Login</Link>
+              </Button>
             )}
             
             <CartDrawer>
