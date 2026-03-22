@@ -150,11 +150,13 @@ Deno.serve(async (req) => {
         .eq('variant_id', variant_id)
         .single()
 
+      const unitPrice = parseFloat(variant.price)
+
       if (existingItem) {
         const newQty = Math.min(existingItem.quantity + quantity, 50)
         const { data, error } = await supabaseClient
           .from('cart_items')
-          .update({ quantity: newQty })
+          .update({ quantity: newQty, unit_price: unitPrice, total_price: unitPrice * newQty })
           .eq('id', existingItem.id)
           .select()
           .single()
@@ -182,7 +184,7 @@ Deno.serve(async (req) => {
 
         const { data, error } = await supabaseClient
           .from('cart_items')
-          .insert({ user_id: userId, product_id, variant_id, quantity })
+          .insert({ user_id: userId, product_id, variant_id, quantity, unit_price: unitPrice, total_price: unitPrice * quantity })
           .select()
           .single()
 
