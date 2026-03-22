@@ -40,19 +40,19 @@ Deno.serve(async (req) => {
 
     // User-scoped client for RLS
     const supabaseClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } }
+      global: { headers: { Authorization: authHeader } }
     })
 
-    // Verify token by fetching user via the user-scoped client
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
-    if (authError || !user) {
+    // Verify JWT using signing keys-compatible claims validation
+    const { data: claimsData, error: authError } = await supabaseClient.auth.getClaims(token)
+    if (authError || !claimsData?.claims?.sub) {
       return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
         status: 401,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
-    const userId = user.id
+    const userId = claimsData.claims.sub
 
     const { method } = req
 
