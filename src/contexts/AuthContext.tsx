@@ -57,40 +57,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   useEffect(() => {
-    // Set up auth state listener before getting session
+    let mounted = true;
+
+    // Get initial session first
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (!mounted) return;
+      if (session) {
+        setSession(session);
+        setUser(session.user);
+        const userProfile = await fetchProfile(session.user.id);
+        if (mounted) setProfile(userProfile);
+      }
+      if (mounted) setLoading(false);
+    });
+
+    // Then set up listener for future changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        console.log('Auth state changed:', event, session?.user?.id);
-        
+      (event, session) => {
+        if (!mounted) return;
+        console.log('Auth state changed:', event);
+
         if (session) {
           setSession(session);
           setUser(session.user);
-          
-          // Fetch user profile
-          const userProfile = await fetchProfile(session.user.id);
-          setProfile(userProfile);
+          // Defer profile fetch to avoid Supabase auth lock contention
+          setTimeout(async () => {
+            if (!mounted) return;
+            const userProfile = await fetchProfile(session.user.id);
+            if (mounted) setProfile(userProfile);
+          }, 0);
         } else {
           setSession(null);
           setUser(null);
           setProfile(null);
         }
-        
+
         setLoading(false);
       }
     );
 
-    // Get initial session
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (session) {
-        setSession(session);
-        setUser(session.user);
-        const userProfile = await fetchProfile(session.user.id);
-        setProfile(userProfile);
-      }
-      setLoading(false);
-    });
-
-    return () => subscription.unsubscribe();
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signUp = async (email: string, password: string, firstName?: string, lastName?: string) => {
