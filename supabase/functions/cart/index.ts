@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
 
       const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
       const subtotal = cartItems.reduce((sum, item) =>
-        sum + (item.quantity * parseFloat(item.product_variants.price))
+        sum + (item.total_price || item.quantity * parseFloat(item.product_variants.price))
       , 0)
 
       return new Response(JSON.stringify({
@@ -150,11 +150,13 @@ Deno.serve(async (req) => {
         .eq('variant_id', variant_id)
         .single()
 
+      const unitPrice = parseFloat(variant.price)
+
       if (existingItem) {
         const newQty = Math.min(existingItem.quantity + quantity, 50)
         const { data, error } = await supabaseClient
           .from('cart_items')
-          .update({ quantity: newQty })
+          .update({ quantity: newQty, unit_price: unitPrice, total_price: unitPrice * newQty })
           .eq('id', existingItem.id)
           .select()
           .single()
@@ -182,7 +184,7 @@ Deno.serve(async (req) => {
 
         const { data, error } = await supabaseClient
           .from('cart_items')
-          .insert({ user_id: userId, product_id, variant_id, quantity })
+          .insert({ user_id: userId, product_id, variant_id, quantity, unit_price: unitPrice, total_price: unitPrice * quantity })
           .select()
           .single()
 
@@ -215,9 +217,20 @@ Deno.serve(async (req) => {
         })
       }
 
+      // Fetch current item to get unit_price
+      const { data: currentItem } = await supabaseClient
+        .from('cart_items')
+        .select('unit_price')
+        .eq('id', cart_item_id)
+        .eq('user_id', userId)
+        .single()
+
+      const itemUnitPrice = currentItem?.unit_price || 0
+      const newTotal = itemUnitPrice * quantity
+
       const { data, error } = await supabaseClient
         .from('cart_items')
-        .update({ quantity })
+        .update({ quantity, total_price: newTotal })
         .eq('id', cart_item_id)
         .eq('user_id', userId)
         .select()
