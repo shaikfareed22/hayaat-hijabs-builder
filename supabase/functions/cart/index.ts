@@ -38,11 +38,13 @@ Deno.serve(async (req) => {
 
     const token = authHeader.replace('Bearer ', '')
 
-    // Verify token server-side with admin client
-    const supabaseAdmin = createClient(supabaseUrl, serviceKey, {
-      auth: { autoRefreshToken: false, persistSession: false }
+    // User-scoped client for RLS
+    const supabaseClient = createClient(supabaseUrl, anonKey, {
+      global: { headers: { Authorization: `Bearer ${token}` } }
     })
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token)
+
+    // Verify token by fetching user via the user-scoped client
+    const { data: { user }, error: authError } = await supabaseClient.auth.getUser()
     if (authError || !user) {
       return new Response(JSON.stringify({ error: 'Invalid or expired token' }), {
         status: 401,
@@ -51,11 +53,6 @@ Deno.serve(async (req) => {
     }
 
     const userId = user.id
-
-    // User-scoped client for RLS
-    const supabaseClient = createClient(supabaseUrl, anonKey, {
-      global: { headers: { Authorization: `Bearer ${token}` } }
-    })
 
     const { method } = req
 
