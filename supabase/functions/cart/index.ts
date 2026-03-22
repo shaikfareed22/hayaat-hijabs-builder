@@ -217,9 +217,20 @@ Deno.serve(async (req) => {
         })
       }
 
+      // Fetch current item to get unit_price
+      const { data: currentItem } = await supabaseClient
+        .from('cart_items')
+        .select('unit_price')
+        .eq('id', cart_item_id)
+        .eq('user_id', userId)
+        .single()
+
+      const itemUnitPrice = currentItem?.unit_price || 0
+      const newTotal = itemUnitPrice * quantity
+
       const { data, error } = await supabaseClient
         .from('cart_items')
-        .update({ quantity })
+        .update({ quantity, total_price: newTotal })
         .eq('id', cart_item_id)
         .eq('user_id', userId)
         .select()
