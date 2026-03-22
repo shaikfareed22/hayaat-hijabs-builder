@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
 
       const itemCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
       const subtotal = cartItems.reduce((sum, item) =>
-        sum + (item.quantity * parseFloat(item.product_variants.price))
+        sum + (item.total_price || item.quantity * parseFloat(item.product_variants.price))
       , 0)
 
       return new Response(JSON.stringify({

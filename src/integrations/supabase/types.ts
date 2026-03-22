@@ -20,6 +20,8 @@ export type Database = {
           id: string
           product_id: string
           quantity: number
+          total_price: number | null
+          unit_price: number | null
           updated_at: string | null
           user_id: string
           variant_id: string
@@ -29,6 +31,8 @@ export type Database = {
           id?: string
           product_id: string
           quantity: number
+          total_price?: number | null
+          unit_price?: number | null
           updated_at?: string | null
           user_id: string
           variant_id: string
@@ -38,6 +42,8 @@ export type Database = {
           id?: string
           product_id?: string
           quantity?: number
+          total_price?: number | null
+          unit_price?: number | null
           updated_at?: string | null
           user_id?: string
           variant_id?: string
