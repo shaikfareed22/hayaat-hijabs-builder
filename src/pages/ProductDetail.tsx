@@ -40,9 +40,11 @@ export default function ProductDetail() {
       if (!error && data) {
         const typed = data as ProductWithVariants;
         setProduct(typed);
-        const first = typed.product_variants[0];
-        setSelectedColor(first?.color ?? '');
-        setSelectedSize(first?.size ?? '');
+        const first = typed.product_variants?.[0];
+        if (first) {
+          setSelectedColor(first.color ?? '');
+          setSelectedSize(first.size ?? '');
+        }
         addToRecentlyViewed(typed.id);
       }
       setLoading(false);

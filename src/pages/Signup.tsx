@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
-import { lovable } from '@/integrations/lovable/index';
 
 export default function Signup() {
   const [email, setEmail] = useState('');
@@ -39,12 +39,37 @@ export default function Signup() {
         title: 'Account Created!',
         description: 'Welcome to Hayaat Hijabs!',
       });
-      // Auto-confirm is enabled, so user is logged in immediately
-      // Navigate to the intended destination
       navigate(from, { replace: true });
     } catch (error: any) {
       toast({
         title: 'Sign Up Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleGoogleSignUp = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: `${window.location.origin}/`,
+        },
+      });
+      if (error) {
+        toast({
+          title: 'Google Sign Up Failed',
+          description: error.message,
+          variant: 'destructive',
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Google Sign Up Failed',
         description: error.message,
         variant: 'destructive',
       });
@@ -132,29 +157,7 @@ export default function Signup() {
             variant="outline"
             className="w-full"
             disabled={isLoading}
-            onClick={async () => {
-              setIsLoading(true);
-              try {
-                const result = await lovable.auth.signInWithOAuth("google", {
-                  redirect_uri: window.location.origin,
-                });
-                if (result?.error) {
-                  toast({
-                    title: 'Google Sign Up Failed',
-                    description: result.error.message,
-                    variant: 'destructive',
-                  });
-                }
-              } catch (error: any) {
-                toast({
-                  title: 'Google Sign Up Failed',
-                  description: error.message,
-                  variant: 'destructive',
-                });
-              } finally {
-                setIsLoading(false);
-              }
-            }}
+            onClick={handleGoogleSignUp}
           >
             <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
               <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />

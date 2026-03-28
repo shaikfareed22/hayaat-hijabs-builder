@@ -141,7 +141,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       if (error) throw error;
     } catch (error: any) {
-      throw new Error(error.message);
+      const message = error.message === 'Failed to fetch' 
+        ? 'Network error. Please check your internet connection or backend status.'
+        : error.message;
+      throw new Error(message);
     } finally {
       setLoading(false);
     }
